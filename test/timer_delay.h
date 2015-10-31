@@ -13,8 +13,8 @@ void timer0_isr()__irq
 void timer_init()
 {
 	T0TCR = (1<<1); 		// Disable timer0, reset when enabled
-	T0MR0  = 30000; // T0MR0 = (Req.Time(in sec) * PCLK)
-						// Here PCLK = 30* 10^6
+	T0MR0  = 18000; // T0MR0 = (Req.Time(in sec) * PCLK)
+						// Here PCLK = 18* 10^6
 	T0MCR = (1<<0)|(1<<1);  // inter on match, reset MR0 on match
 	
 	VICIntEnable = (1<<4); // Enable timer 0 interrupt
@@ -24,6 +24,7 @@ void timer_init()
 
 void delay_ms(int x)
 {
+	T0TCR |=(1<<0); //Start timer0
 	for(;x>0;x--)
 	{
 		while(tmrF);

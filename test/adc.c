@@ -41,7 +41,7 @@ void uart_init()
 	U0LCR = 0x83;
 	
 	U0DLM = 0x00;
-	U0DLL = 0xc3;
+	U0DLL = 117;
 	
 	U0LCR = 0x03;
 
@@ -56,8 +56,8 @@ void uart_init()
 
 void adc_init()
 {
-	PINSEL0 |= (1<<24);
-	AD0CR = (1<<1)|(1<<21)|(1<<9)|(1<<10);
+	PINSEL0 |= (1<<26);		// P0.29 as AD0.2
+	AD0CR = (1<<1)|(1<<21)|(1<<8)|(1<<9);
 }
 
 int main()
@@ -65,10 +65,11 @@ int main()
 	int val;
 	adc_init();
 	uart_init();
+	timer_init();
 	while(1)
 	{
 		AD0CR |= (1<<24);
-		while(!(AD0DR2 & (1<<31)));
+		while(!(AD0GDR & (1<<31)));
 		val = (AD0DR0 & 0xffc0) >> 6;
 		uart_tx_int(val);
 		delay_ms(500);	
