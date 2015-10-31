@@ -45,3 +45,12 @@ Keil/hexFile/uart_rx_interrupt.o
 *.crf
 Keil/hexFile/uart_rx_interrupt.__i
 *.d
+*.plg
+Keil/hexFile/hexFile.htm
+*.lnp
+*.sct
+Keil/hexFile/hexFile.tra
+*.__i
+*.axf
+*.map
+*.o
