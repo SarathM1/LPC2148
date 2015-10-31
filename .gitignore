@@ -41,3 +41,7 @@ $RECYCLE.BIN/
 Network Trash Folder
 Temporary Items
 .apdisk
+Keil/hexFile/uart_rx_interrupt.o
+*.crf
+Keil/hexFile/uart_rx_interrupt.__i
+*.d
