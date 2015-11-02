@@ -134,7 +134,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGDARM</Key>
-          <Name>(134=-1,-1,-1,-1,0)(135=-1,-1,-1,-1,0)(153=-1,-1,-1,-1,0)(154=-1,-1,-1,-1,0)(108=-1,-1,-1,-1,0)(106=-1,-1,-1,-1,0)(105=-1,-1,-1,-1,0)(145=-1,-1,-1,-1,0)(147=-1,-1,-1,-1,0)(80=-1,-1,-1,-1,0)(104=-1,-1,-1,-1,0)(100=-1,-1,-1,-1,0)(101=-1,-1,-1,-1,0)(160=-1,-1,-1,-1,0)(161=-1,-1,-1,-1,0)(113=781,49,1156,597,1)(112=-1,-1,-1,-1,0)(137=-1,-1,-1,-1,0)(138=-1,-1,-1,-1,0)(117=-1,-1,-1,-1,0)(146=-1,-1,-1,-1,0)(110=-1,-1,-1,-1,0)(111=-1,-1,-1,-1,0)(114=-1,-1,-1,-1,0)(141=-1,-1,-1,-1,0)(142=-1,-1,-1,-1,0)(143=-1,-1,-1,-1,0)(144=-1,-1,-1,-1,0)(115=-1,-1,-1,-1,0)(116=-1,-1,-1,-1,0)</Name>
+          <Name>(134=-1,-1,-1,-1,0)(135=-1,-1,-1,-1,0)(153=528,72,849,389,1)(154=-1,-1,-1,-1,0)(108=538,233,685,342,1)(106=-1,-1,-1,-1,0)(105=-1,-1,-1,-1,0)(145=-1,-1,-1,-1,0)(147=-1,-1,-1,-1,0)(80=-1,-1,-1,-1,0)(104=-1,-1,-1,-1,0)(100=-1,-1,-1,-1,0)(101=-1,-1,-1,-1,0)(160=-1,-1,-1,-1,0)(161=-1,-1,-1,-1,0)(113=781,49,1156,597,1)(112=-1,-1,-1,-1,0)(137=-1,-1,-1,-1,0)(138=-1,-1,-1,-1,0)(117=-1,-1,-1,-1,0)(146=-1,-1,-1,-1,0)(110=-1,-1,-1,-1,0)(111=-1,-1,-1,-1,0)(114=-1,-1,-1,-1,0)(141=-1,-1,-1,-1,0)(142=-1,-1,-1,-1,0)(143=-1,-1,-1,-1,0)(144=-1,-1,-1,-1,0)(115=-1,-1,-1,-1,0)(116=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -184,8 +184,8 @@
     <tvExpOptDlg>0</tvExpOptDlg>
     <cbSel>0</cbSel>
     <File>
-      <GroupNumber>0</GroupNumber>
-      <FileNumber>0</FileNumber>
+      <GroupNumber>1</GroupNumber>
+      <FileNumber>1</FileNumber>
       <FileType>2</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
@@ -198,15 +198,15 @@
       <FilenameWithoutPath>Startup.s</FilenameWithoutPath>
     </File>
     <File>
-      <GroupNumber>0</GroupNumber>
-      <FileNumber>0</FileNumber>
+      <GroupNumber>1</GroupNumber>
+      <FileNumber>2</FileNumber>
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>0</ColumnNumber>
+      <ColumnNumber>34</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>12</TopLine>
-      <CurrentLine>20</CurrentLine>
+      <TopLine>5</TopLine>
+      <CurrentLine>5</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\test\uart_rx_interrupt.c</PathWithFileName>
       <FilenameWithoutPath>uart_rx_interrupt.c</FilenameWithoutPath>
@@ -353,7 +353,7 @@
         <AnchorWinID>197</AnchorWinID>
         <AnchorWinName>Build Output</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -378,7 +378,7 @@
         <AnchorWinID>198</AnchorWinID>
         <AnchorWinName>Command</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -403,7 +403,7 @@
         <AnchorWinID>199</AnchorWinID>
         <AnchorWinName>Find in Files</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -428,7 +428,7 @@
         <AnchorWinID>38007</AnchorWinID>
         <AnchorWinName>Browser</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -453,7 +453,7 @@
         <AnchorWinID>1939</AnchorWinID>
         <AnchorWinName>UART #1</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -478,7 +478,7 @@
         <AnchorWinID>1940</AnchorWinID>
         <AnchorWinName>UART #2</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -503,7 +503,7 @@
         <AnchorWinID>1941</AnchorWinID>
         <AnchorWinName>UART #3</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Build Output</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -803,7 +803,7 @@
         <AnchorWinID>1005</AnchorWinID>
         <AnchorWinName>Project</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Project</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -828,7 +828,7 @@
         <AnchorWinID>109</AnchorWinID>
         <AnchorWinName>Books</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Project</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -853,7 +853,7 @@
         <AnchorWinID>195</AnchorWinID>
         <AnchorWinName>Functions</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Project</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -878,7 +878,7 @@
         <AnchorWinID>196</AnchorWinID>
         <AnchorWinName>Templates</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Project</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -928,7 +928,7 @@
         <AnchorWinID>35885</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -953,7 +953,7 @@
         <AnchorWinID>35886</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -978,7 +978,7 @@
         <AnchorWinID>35887</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1003,7 +1003,7 @@
         <AnchorWinID>35888</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1028,7 +1028,7 @@
         <AnchorWinID>35889</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1053,7 +1053,7 @@
         <AnchorWinID>35890</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1078,7 +1078,7 @@
         <AnchorWinID>35891</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1103,7 +1103,7 @@
         <AnchorWinID>35892</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1128,7 +1128,7 @@
         <AnchorWinID>35893</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1153,7 +1153,7 @@
         <AnchorWinID>35894</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1178,7 +1178,7 @@
         <AnchorWinID>35895</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1203,7 +1203,7 @@
         <AnchorWinID>35896</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1228,7 +1228,7 @@
         <AnchorWinID>35897</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1253,7 +1253,7 @@
         <AnchorWinID>35898</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1278,7 +1278,7 @@
         <AnchorWinID>35899</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1303,7 +1303,7 @@
         <AnchorWinID>35900</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1328,7 +1328,7 @@
         <AnchorWinID>35901</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1353,7 +1353,7 @@
         <AnchorWinID>35902</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1378,7 +1378,7 @@
         <AnchorWinID>35903</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1403,7 +1403,7 @@
         <AnchorWinID>35904</AnchorWinID>
         <AnchorWinName>???</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>???</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1453,7 +1453,7 @@
         <AnchorWinID>203</AnchorWinID>
         <AnchorWinName>Disassembly</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Disassembly</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1478,7 +1478,7 @@
         <AnchorWinID>1913</AnchorWinID>
         <AnchorWinName>Instruction Trace</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Disassembly</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1503,7 +1503,7 @@
         <AnchorWinID>343</AnchorWinID>
         <AnchorWinName>Performance Analyzer</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Disassembly</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1528,7 +1528,7 @@
         <AnchorWinID>204</AnchorWinID>
         <AnchorWinName>Performance Analyzer</AnchorWinName>
         <OtherWinID>0</OtherWinID>
-        <OtherWinName>Disassembly</OtherWinName>
+        <OtherWinName></OtherWinName>
         <WinType>1</WinType>
         <DockType>4</DockType>
         <DockLocation>2</DockLocation>
@@ -1554,19 +1554,13 @@
     <ActiveMDIGroup>0</ActiveMDIGroup>
     <MDIGroup>
       <Size>100</Size>
-      <ActiveTab>2</ActiveTab>
+      <ActiveTab>0</ActiveTab>
       <Documents>
         <Doc>
           <Name>..\test\uart_rx_interrupt.c</Name>
-          <ColumnNumber>0</ColumnNumber>
-          <TopLine>12</TopLine>
-          <CurrentLine>20</CurrentLine>
-        </Doc>
-        <Doc>
-          <Name>.\Startup.s</Name>
-          <ColumnNumber>0</ColumnNumber>
+          <ColumnNumber>3</ColumnNumber>
           <TopLine>1</TopLine>
-          <CurrentLine>1</CurrentLine>
+          <CurrentLine>2</CurrentLine>
         </Doc>
       </Documents>
     </MDIGroup>
