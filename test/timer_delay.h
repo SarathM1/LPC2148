@@ -24,10 +24,11 @@ void timer_init()
 
 void delay_ms(int x)
 {
-	T0TCR |=(1<<0); //Start timer0
+	T0TCR =(1<<0); //Start timer0
 	for(;x>0;x--)
 	{
 		while(tmrF);
 		tmrF = 1;
 	}
+	T0TCR = (1<<1); 		// Disable timer0, reset when enabled
 }
