@@ -57,3 +57,5 @@ Keil/hexFile/hexFile.tra
 *.bak
 *.dep
 Keil/project_file_uvopt.bak
+*.uvopt
+Keil/*
