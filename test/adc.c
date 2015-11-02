@@ -10,7 +10,6 @@ void adc_init()
 int main()
 {
 	int val;
-//	int chn;
 	adc_init();
 	uart_init();
 	timer_init();
@@ -21,6 +20,6 @@ int main()
 		val = (AD0DR1 & 0xFFC0) >> 6;
 		uart_tx_int(val);
 		uart_tx_char('\r');
-		delay_ms(500);	
+		delay_ms(50);				  // To avoid PC from hanging
 	}
 }
