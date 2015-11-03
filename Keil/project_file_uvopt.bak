@@ -134,7 +134,7 @@
         <SetRegEntry>
           <Number>0</Number>
           <Key>DLGDARM</Key>
-          <Name>(134=-1,-1,-1,-1,0)(135=-1,-1,-1,-1,0)(153=391,106,712,423,0)(154=-1,-1,-1,-1,0)(108=538,233,685,342,0)(106=-1,-1,-1,-1,0)(105=-1,-1,-1,-1,0)(145=-1,-1,-1,-1,0)(147=-1,-1,-1,-1,0)(80=-1,-1,-1,-1,0)(104=704,205,1010,613,0)(100=-1,-1,-1,-1,0)(101=-1,-1,-1,-1,0)(160=-1,-1,-1,-1,0)(161=-1,-1,-1,-1,0)(113=781,49,1156,597,0)(112=-1,-1,-1,-1,0)(137=-1,-1,-1,-1,0)(138=-1,-1,-1,-1,0)(117=-1,-1,-1,-1,0)(146=-1,-1,-1,-1,0)(110=838,6,1354,499,0)(111=-1,-1,-1,-1,0)(114=-1,-1,-1,-1,0)(141=845,113,1277,677,1)(142=-1,-1,-1,-1,0)(143=-1,-1,-1,-1,0)(144=-1,-1,-1,-1,0)(115=-1,-1,-1,-1,0)(116=-1,-1,-1,-1,0)</Name>
+          <Name>(134=-1,-1,-1,-1,0)(135=-1,-1,-1,-1,0)(153=391,106,712,423,0)(154=-1,-1,-1,-1,0)(108=538,233,685,342,0)(106=-1,-1,-1,-1,0)(105=-1,-1,-1,-1,0)(145=-1,-1,-1,-1,0)(147=-1,-1,-1,-1,0)(80=-1,-1,-1,-1,0)(104=893,206,1199,614,1)(100=-1,-1,-1,-1,0)(101=-1,-1,-1,-1,0)(160=-1,-1,-1,-1,0)(161=-1,-1,-1,-1,0)(113=781,49,1156,597,0)(112=-1,-1,-1,-1,0)(137=-1,-1,-1,-1,0)(138=-1,-1,-1,-1,0)(117=-1,-1,-1,-1,0)(146=-1,-1,-1,-1,0)(110=838,6,1354,499,0)(111=-1,-1,-1,-1,0)(114=-1,-1,-1,-1,0)(141=845,113,1277,677,0)(142=-1,-1,-1,-1,0)(143=-1,-1,-1,-1,0)(144=-1,-1,-1,-1,0)(115=-1,-1,-1,-1,0)(116=-1,-1,-1,-1,0)</Name>
         </SetRegEntry>
         <SetRegEntry>
           <Number>0</Number>
@@ -203,10 +203,10 @@
       <FileType>1</FileType>
       <tvExp>0</tvExp>
       <Focus>0</Focus>
-      <ColumnNumber>1</ColumnNumber>
+      <ColumnNumber>0</ColumnNumber>
       <tvExpOptDlg>0</tvExpOptDlg>
-      <TopLine>1</TopLine>
-      <CurrentLine>1</CurrentLine>
+      <TopLine>12</TopLine>
+      <CurrentLine>15</CurrentLine>
       <bDave2>0</bDave2>
       <PathWithFileName>..\test\adc.c</PathWithFileName>
       <FilenameWithoutPath>adc.c</FilenameWithoutPath>
@@ -228,9 +228,9 @@
   </Group>
 
   <AlienFiles>
-    <PathWithFilename>C:\Users\ADMIN\Documents\LPC2148\test\timer_delay.h</PathWithFilename>
-    <TopLine>27</TopLine>
-    <CurrentLine>33</CurrentLine>
+    <PathWithFilename>C:\Users\ADMIN\Documents\ARM7\adc\oneChannel.c</PathWithFilename>
+    <TopLine>1</TopLine>
+    <CurrentLine>8</CurrentLine>
     <Constant>0</Constant>
     <WindowPosition>
       <length>0</length>
@@ -254,9 +254,9 @@
   </AlienFiles>
 
   <AlienFiles>
-    <PathWithFilename>C:\Users\ADMIN\Documents\LPC2148\test\uart0_rx_interrupt.h</PathWithFilename>
-    <TopLine>9</TopLine>
-    <CurrentLine>14</CurrentLine>
+    <PathWithFilename>C:\Users\ADMIN\Documents\LPC2148\test\timer_delay.h</PathWithFilename>
+    <TopLine>27</TopLine>
+    <CurrentLine>30</CurrentLine>
     <Constant>0</Constant>
     <WindowPosition>
       <length>0</length>
@@ -1620,25 +1620,25 @@
     <ActiveMDIGroup>0</ActiveMDIGroup>
     <MDIGroup>
       <Size>100</Size>
-      <ActiveTab>3</ActiveTab>
+      <ActiveTab>0</ActiveTab>
       <Documents>
         <Doc>
           <Name>..\test\adc.c</Name>
-          <ColumnNumber>1</ColumnNumber>
-          <TopLine>1</TopLine>
-          <CurrentLine>1</CurrentLine>
+          <ColumnNumber>0</ColumnNumber>
+          <TopLine>12</TopLine>
+          <CurrentLine>15</CurrentLine>
         </Doc>
         <Doc>
-          <Name>..\test\uart0_rx_interrupt.h</Name>
-          <ColumnNumber>0</ColumnNumber>
-          <TopLine>9</TopLine>
-          <CurrentLine>14</CurrentLine>
+          <Name>C:\Users\ADMIN\Documents\ARM7\adc\oneChannel.c</Name>
+          <ColumnNumber>21</ColumnNumber>
+          <TopLine>1</TopLine>
+          <CurrentLine>8</CurrentLine>
         </Doc>
         <Doc>
           <Name>..\test\timer_delay.h</Name>
-          <ColumnNumber>11</ColumnNumber>
+          <ColumnNumber>0</ColumnNumber>
           <TopLine>27</TopLine>
-          <CurrentLine>33</CurrentLine>
+          <CurrentLine>30</CurrentLine>
         </Doc>
         <Doc>
           <Name>.\Startup.s</Name>
