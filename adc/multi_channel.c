@@ -23,19 +23,16 @@ int main()
 	{
 		adc_read(1);
 		val = (AD0DR1 & 0xFFC0) >> 6;  // Result in bits 15:6
-		val = val * 5;
-		uart_tx_int(val);				// Scaling Value
+		uart_tx_int(val);				
 		uart_tx_char(' ');
 
 		adc_read(2);
 		val = (AD0DR2 & 0xFFC0) >> 6;  // Result in bits 15:6
-		val = val * 5;					// Scaling Value
 		uart_tx_int(val);
 		uart_tx_char(' ');
 
 		adc_read(3);
 		val = (AD0DR3 & 0xFFC0) >> 6;  // Result in bits 15:6
-		val = val * 5;				   // Scaling Value
 		uart_tx_int(val);
 		uart_tx_char('\r');
 		delay_ms(500);				  // To avoid PC from hanging
