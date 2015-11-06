@@ -391,9 +391,9 @@
               <FilePath>.\Startup.s</FilePath>
             </File>
             <File>
-              <FileName>oneChannel.c</FileName>
+              <FileName>rtc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\adc\oneChannel.c</FilePath>
+              <FilePath>..\test\rtc.c</FilePath>
             </File>
           </Files>
         </Group>
