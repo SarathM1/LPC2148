@@ -52,8 +52,7 @@ void uart_init()
 	
 	U0LCR = 0x03;
 
-	VICIntEnable = 0x00000040; // Enable UART0 Interrupt
-	VICIntSelect = 0x00000000; // Set UART0 interrupt as IRQ
-	VICVectCntl0 = 0x26;	// Asign 6 for UART0 and set IRQslot_en
-	VICVectAddr0 = (unsigned)uart;	 // Address for ISR
+	VICIntEnable |= 0x00000040; // Enable UART0 Interrupt
+	VICVectCntl1 = 0x26;	// Asign 6 for UART0 and set IRQslot_en
+	VICVectAddr1 = (unsigned)uart;	 // Address for ISR
 }
