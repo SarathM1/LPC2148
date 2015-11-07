@@ -12,3 +12,18 @@ void LCD_DisplayRtcTime(char hour,char min,char sec)
     LCD_DataWrite((sec & 0x0f) + 0x30);
  
  }
+
+ void LCD_DisplayRtcDate(char day,char month,char year)
+ {
+     LCD_DataWrite(((day>>4) & 0x0f) + 0x30);
+     LCD_DataWrite((day & 0x0f) + 0x30);
+     LCD_DataWrite('/');
+ 
+     LCD_DataWrite(((month>>4) & 0x0f) + 0x30);
+     LCD_DataWrite((month & 0x0f) + 0x30);
+     LCD_DataWrite('/');
+ 
+     LCD_DataWrite(((year>>4) & 0x0f) + 0x30);
+    LCD_DataWrite((year & 0x0f) + 0x30);
+ 
+ }
