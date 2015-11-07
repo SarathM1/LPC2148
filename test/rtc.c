@@ -10,6 +10,7 @@
 #define SA 0x68		  //Slave address
 
 char flag= 'w';
+int cnt = 0;
 
 void i2c_start (void)
 {
@@ -64,12 +65,22 @@ void i2c_isr()__irq
 			I2C0CONCLR = SIC;
 			break;
 		case 0x50: // Data byte has been received ACK returned
-			I2C0CONSET	|= AA;
-			uart_tx_str("Data byte has been received ACK returned\r\n");
-			uart_tx_str("Data = ");
-			uart_tx_int(I2C0DAT);
-			uart_tx_str("\r\n");
-			I2C0CONCLR = SIC;
+			if(cnt < 3)
+			{
+				cnt++;
+				I2C0CONSET	|= AA;
+				uart_tx_str("Data byte has been received ACK returned\r\n");
+				uart_tx_str("Data = ");
+				uart_tx_int(I2C0DAT);
+				uart_tx_str("\r\n");
+				I2C0CONCLR = SIC;
+			}
+			else
+			{
+				I2C0CONSET |= STO;
+				I2C0CONCLR = SIC;
+				uart_tx_str("Stopping\r\n");
+			}
 			break;
 		default:
 			while(1)			// Debugging
