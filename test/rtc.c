@@ -73,10 +73,6 @@ void i2c_isr()__irq
 		case 64: // SLA + R transmitted, ACK recieved
 			uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
 			I2C0CONSET |= AA; 	  // To acknowledge Data received
-			uart_tx_str("Data = ");
-			res = I2C0DAT;
-			uart_tx_int(res);
-			uart_tx_str("\r\n");
 			I2C0CONCLR = SIC;
 			break;
 		case 80: // Data byte has been received ACK returned
