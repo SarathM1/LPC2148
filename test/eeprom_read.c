@@ -10,7 +10,7 @@
 
 int cnt = 0;
 int res;
-int rtcInitFlag = 0;
+int flag = 0;
 char done = 1;
 
 
@@ -39,12 +39,12 @@ void i2c_isr()__irq
 			uart_tx_str("SLA+W transmitted, ACK received\r\n");	
 			break;
 		case 40: //Data byte in I2C0DAT transmitted, ACK received
-			if(rtcInitFlag == 0)
+			if(flag == 0)
 			{
 				uart_tx_str("Word Address 0x00 transmitted, ACK received\r\n");
 				I2C0DAT = 0X00;
 				I2C0CONCLR = SIC;
-				rtcInitFlag = 1;
+				flag = 1;
 			}
 			else
 			{
@@ -79,9 +79,10 @@ void i2c_isr()__irq
 				I2C0CONSET |= STO;
 				I2C0CONCLR = SIC;
 				uart_tx_str("Stopping\r\n");
+				uart_tx_str("-------------------------------------------------\r\n");
 				done = 0;
 				cnt = 0	; 		// Resetting all flags
-				rtcInitFlag = 0;	// Resetting all flags
+				flag = 0;	// Resetting all flags
 			}
 			break;
 		default:

@@ -7,7 +7,6 @@
 #define I2EN (1<<6)
 #define STAC (1<<5)
 #define SIC (1<<3)
-#define SA 0x68		  //Slave address
 
 int res;
 char flag = 0;
