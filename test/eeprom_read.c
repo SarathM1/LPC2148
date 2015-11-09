@@ -11,7 +11,7 @@
 int cnt = 0;
 int res;
 int rtcInitFlag = 0;
-
+char done = 1;
 
 
 
@@ -79,6 +79,9 @@ void i2c_isr()__irq
 				I2C0CONSET |= STO;
 				I2C0CONCLR = SIC;
 				uart_tx_str("Stopping\r\n");
+				done = 0;
+				cnt = 0	; 		// Resetting all flags
+				rtcInitFlag = 0;	// Resetting all flags
 			}
 			break;
 		default:
@@ -115,8 +118,12 @@ int main()
 {
 	i2c_init();
 	uart_init();
-	I2C0CONCLR = 0XFF;			// Clearin I2C0CONSET
-	I2C0CONSET	=  I2EN|AA;		// Enable I2C and set AA
-	I2C0CONSET	|=	STA;		// i2c start
-	while(1);
+	while(1)
+	{
+		I2C0CONCLR = 0XFF;			// Clearin I2C0CONSET
+		I2C0CONSET	=  I2EN|AA;		// Enable I2C and set AA
+		I2C0CONSET	|=	STA;		// i2c start
+		while(done);
+		done=1;
+	}
 }
