@@ -391,9 +391,9 @@
               <FilePath>.\Startup.s</FilePath>
             </File>
             <File>
-              <FileName>led.c</FileName>
+              <FileName>rtc.c</FileName>
               <FileType>1</FileType>
-              <FilePath>D:\led.c</FilePath>
+              <FilePath>..\test\rtc.c</FilePath>
             </File>
           </Files>
         </Group>
