@@ -9,7 +9,6 @@
 #define SIC (1<<3)
 #define SA 0x68		  //Slave address
 
-char flag= 'w';
 int cnt = 0;
 int res;
 int rtcInitFlag = 0;
@@ -30,18 +29,9 @@ void i2c_isr()__irq
 	switch(status)
 	{
 		case 8:	// START condtn transmitted
-			if(flag == 'w')
-			{
-				I2C0DAT = 0xA0;
-				I2C0CONCLR = SIC|STAC;
-				uart_tx_str("START transmitted\r\n");
-			}
-			else
-			{
-				I2C0DAT = 0xA1;
-				I2C0CONCLR = SIC|STAC;
-				uart_tx_str("START transmitted\r\n");
-			}
+			I2C0DAT = 0xA0;
+			I2C0CONCLR = SIC|STAC;
+			uart_tx_str("START transmitted\r\n");
 			break;
 		case 32: // SA + W transmitted, NOT ACK received
 			I2C0CONSET |= STO;
@@ -64,7 +54,6 @@ void i2c_isr()__irq
 			else
 			{
 				uart_tx_str("Word Address 0x00 transmitted, ACK received\r\n");
-				flag = 'r';
 				I2C0CONSET	|=	STA;
 				I2C0CONCLR = SIC;
 			}
@@ -72,7 +61,7 @@ void i2c_isr()__irq
 		case 16:
 			I2C0DAT = 0xA1;
 			I2C0CONCLR = SIC|STAC;
-			uart_tx_str("START transmitted\r\n");
+			uart_tx_str("REPEATED START transmitted\r\n");
 			break;
 		case 64: // SLA + R transmitted, ACK recieved
 			uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
@@ -83,13 +72,11 @@ void i2c_isr()__irq
 			{
 				cnt++;
 				I2C0CONSET	|= AA;
-				uart_tx_str("Data byte has been received ACK returned\r\n");
 				uart_tx_str("Data = ");
 				res = I2C0DAT;
 				uart_tx_char(res);
-				uart_tx_str("\t");
-				uart_tx_int(res);
 				uart_tx_str("\r\n");
+				uart_tx_str("Data byte has been received ACK returned\r\n");
 				I2C0CONCLR = SIC;
 			}
 			else
