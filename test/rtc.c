@@ -25,8 +25,8 @@ void i2c_isr()__irq
 {
 	char status;
 	status = I2C0STAT;
-	//uart_tx_int(status);
-	//uart_tx_char('-');
+	uart_tx_int(status);
+	uart_tx_char('-');
 	switch(status)
 	{
 		case 8:	// START condtn transmitted
@@ -34,44 +34,44 @@ void i2c_isr()__irq
 			{
 				I2C0DAT = 0xD0;
 				I2C0CONCLR = SIC|STAC;
-				//uart_tx_str("START transmitted\r\n");
+				uart_tx_str("START transmitted\r\n");
 			}
 			else
 			{
 				I2C0DAT = 0xD1;
 				I2C0CONCLR = SIC|STAC;
-				//uart_tx_str("START transmitted\r\n");
+				uart_tx_str("START transmitted\r\n");
 			}
 			break;
 		case 32: // SA + W transmitted, NOT ACK received
 			I2C0CONSET |= STO;
 			I2C0CONCLR = SIC;
-			//uart_tx_str("SLA+W transmitted, NOT ACK received\r\n");
+			uart_tx_str("SLA+W transmitted, NOT ACK received\r\n");
 			break;		
 		case 24: // SA + W transmitted, ACK received
 			I2C0DAT = 0X00;
 			I2C0CONCLR = SIC;
-			//uart_tx_str("SLA+W transmitted, ACK received\r\n");
+			uart_tx_str("SLA+W transmitted, ACK received\r\n");	
 			break;
 		case 40: //Data byte in I2C0DAT transmitted, ACK received
-			if( rtcInitFlag == 0 )
-			{
-				I2C0DAT = (0x00);
-				I2C0CONCLR = SIC;
-				//uart_tx_str("Data byte in I2C0DAT transmitted, ACK received\r\n");	
-				rtcInitFlag = 1;
-			}
-			else
-			{
-				rtcInitFlag = 2;
+//			if(rtcInitFlag ==0)
+//			{
+//				I2C0DAT = 0X00;
+//				I2C0CONCLR = SIC;
+//				uart_tx_str("SLA+W transmitted, ACK received\r\n");
+//				rtcInitFlag++;
+//			}
+//			else if(rtcInitFlag == 10)
+//			{
 				I2C0CONSET |= STO;
 				I2C0CONCLR = SIC;
-				//uart_tx_str("data byte transmitted, ACK received, Stopping\r\n");
+				uart_tx_str("data byte transmitted, ACK received, Stopping\r\n");
+				rtcInitFlag = 1;
 				flag = 0;
-			}
+//			}
 			break;
 		case 64: // SLA + R transmitted, ACK recieved
-			//uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
+			uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
 			I2C0CONSET |= AA; 	  // To acknowledge Data received
 			uart_tx_str("Data = ");
 			res = I2C0DAT;
@@ -84,7 +84,7 @@ void i2c_isr()__irq
 			{
 				cnt++;
 				I2C0CONSET	|= AA;
-				//uart_tx_str("Data byte has been received ACK returned\r\n");
+				uart_tx_str("Data byte has been received ACK returned\r\n");
 				uart_tx_str("Data = ");
 				res = I2C0DAT;
 				uart_tx_int(res);
@@ -138,11 +138,11 @@ int main()
 	i2c_init();
 	uart_init();
 	rtc_init();
-	while(rtcInitFlag != 2);
+	while(rtcInitFlag !=1);
 	//flag = 'w';
 	uart_tx_str("Starting Program\r\n");
 	i2c_start();
 	while(flag);
-	i2c_start();
+	//i2c_start();
 	while(1);
 }
