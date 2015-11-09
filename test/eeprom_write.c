@@ -9,9 +9,9 @@
 #define SIC (1<<3)
 #define SA 0x68		  //Slave address
 
-int cnt = 0;
 int res;
-int rtcInitFlag = 0;
+char flag = 0;
+char done = 1;
 char str[] = "wirewordsAcademy";
 
 void i2c_isr()__irq
@@ -38,16 +38,16 @@ void i2c_isr()__irq
 			uart_tx_str("SLA+W transmitted, ACK received\r\n");	
 			break;
 		case 40: //Data byte in I2C0DAT transmitted, ACK received
-			if(rtcInitFlag==0)
+			if(flag==0)
 			{
 				uart_tx_str("Word Address 0x00 transmitted, ACK received\r\n");
 				I2C0DAT = 0X00;
 				I2C0CONCLR = SIC;
 				uart_tx_str("Word Address 0x00 transmitted, ACK received\r\n");	
 			}
-			else if(rtcInitFlag<=10)
+			else if(flag<=10)
 			{
-				I2C0DAT = str[rtcInitFlag-1];	  // rtcInit is one ahead
+				I2C0DAT = str[flag-1];	  // rtcInit is one ahead
 				uart_tx_str("Writing to eeprom, char = ");
 				uart_tx_char(I2C0DAT);
 				I2C0CONCLR = SIC;
@@ -57,9 +57,12 @@ void i2c_isr()__irq
 			{
 				I2C0CONSET |= STO;
 				I2C0CONCLR = SIC;
-				uart_tx_str("\r\ndata byte transmitted, ACK received, Stopping\r\n");
+				uart_tx_str("Data byte transmitted, ACK received, Stopping\r\n");
+				uart_tx_str("-------------------------------------------------\r\n");
+				done = 0;
+				flag = 0;
 			}
-			rtcInitFlag++;
+			flag++;
 			break;
 		default:
 			while(1)			// Debugging
@@ -96,8 +99,12 @@ int main()
 {
 	i2c_init();
 	uart_init();
-	I2C0CONCLR = 0XFF;			// Clearin I2C0CONSET
-	I2C0CONSET	=  I2EN|AA;		// Enable I2C and set AA
-	I2C0CONSET	|=	STA;		// i2c start
-	while(1);
+	while(1)
+	{
+		I2C0CONCLR = 0XFF;			// Clearin I2C0CONSET
+		I2C0CONSET	=  I2EN|AA;		// Enable I2C and set AA
+		I2C0CONSET	|=	STA;		// i2c start
+		while(done);
+		done = 1;
+	}
 }
