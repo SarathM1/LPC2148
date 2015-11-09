@@ -62,6 +62,7 @@ void i2c_isr()__irq
 			break;
 		case 64: // SLA + R transmitted, ACK recieved
 			uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
+			I2C0CONCLR = SIC;
 			break;
 		case 80: // Data byte has been received ACK returned
 			if(cnt < 1)
