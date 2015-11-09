@@ -391,9 +391,9 @@
               <FilePath>.\Startup.s</FilePath>
             </File>
             <File>
-              <FileName>multi_channel.c</FileName>
+              <FileName>led.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\adc\multi_channel.c</FilePath>
+              <FilePath>D:\led.c</FilePath>
             </File>
           </Files>
         </Group>
