@@ -7,17 +7,12 @@
 #define I2EN (1<<6)
 #define STAC (1<<5)
 #define SIC (1<<3)
-#define SA 0x68		  //Slave address
 
 int cnt = 0;
 int res;
 int rtcInitFlag = 0;
 
-void i2c_start (void)
-{
-	I2C0CONCLR	=	STO;
-	I2C0CONSET	|=	STA;
-}
+
 
 
 void i2c_isr()__irq
@@ -120,6 +115,8 @@ int main()
 {
 	i2c_init();
 	uart_init();
-	i2c_start();
+	I2C0CONCLR = 0XFF;			// Clearin I2C0CONSET
+	I2C0CONSET	=  I2EN|AA;		// Enable I2C and set AA
+	I2C0CONSET	|=	STA;		// i2c start
 	while(1);
 }
