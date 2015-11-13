@@ -25,28 +25,28 @@ void i2c_isr()__irq
 	uart_tx_char('-');
 	switch(status)
 	{
-		case 8:	// START condtn transmitted
+		case 8:	// 0x08: START condtn transmitted
 			I2C0DAT = 0xE1;
 			I2C0CONCLR = SIC|STAC;
 			uart_tx_str("START transmitted\r\n");
 			break;
 
-		case 40: //Data byte in I2C0DAT transmitted, ACK received
+		case 40: // 0x28: Data byte in I2C0DAT transmitted, ACK received
 			uart_tx_str("Data 0x00 transmitted, ACK received\r\n");
 			I2C0CONSET	|=	STA;
 			I2C0CONCLR = SIC;
 			rw = 1;
 			break;
-		case 16:
+		case 16: // 0x10 : 	REPEATED START transmitted
 			I2C0DAT = 0xD1;
 			I2C0CONCLR = SIC|STAC;
 			uart_tx_str("REPEATED START transmitted\r\n");
 			break;
-		case 64: // SLA + R transmitted, ACK recieved
+		case 64: // 0x40: SLA + R transmitted, ACK recieved
 			uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
 			I2C0CONCLR = SIC;
 			break;
-		case 80: // Data byte has been received ACK returned
+		case 80: // 0x50: Data byte has been received ACK returned
 			if(cnt <= 5 )
 			{
 				cnt++;
@@ -68,7 +68,7 @@ void i2c_isr()__irq
 				I2C0CONCLR = SIC;
 			}
 			break;
-		case 88:
+		case 88: // 0x58: Data byte has been received, NOT ACK returned
 			I2C0CONSET |= STO;
 			I2C0CONCLR = SIC|AAC;
 			uart_tx_str("Data byte has been received, NOT ACK returned\r\n");
