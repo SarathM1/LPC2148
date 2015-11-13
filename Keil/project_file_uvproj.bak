@@ -394,6 +394,11 @@
               <FileName>eeprom_write.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\test\eeprom_write.c</FilePath>
+            </File>
+            <File>
+              <FileName>eeprom_read.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\test\eeprom_read.c</FilePath>
               <FileOption>
                 <CommonProperty>
                   <UseCPPCompiler>2</UseCPPCompiler>
@@ -433,11 +438,6 @@
                   </Cads>
                 </FileArmAds>
               </FileOption>
-            </File>
-            <File>
-              <FileName>eeprom_read.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\test\eeprom_read.c</FilePath>
             </File>
           </Files>
         </Group>
