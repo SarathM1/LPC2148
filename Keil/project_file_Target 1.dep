@@ -1,5 +1,5 @@
 Dependencies for Project 'project_file', Target 'Target 1': (DO NOT MODIFY !)
 F (.\Startup.s)(0x563492E6)(--device DARMP --pd "__EVAL SETA 1" -g --apcs=interwork -I "C:\Keil\ARM\INC\Philips" --list "Startup.lst" --xref -o ".\hexFile\Startup.o")
-F (..\test\arduino\i2cWithArduino.c)(0x5645AB7A)(-c --device DARMP -D__EVAL -g -O0 --apcs=interwork -I "C:\Keil\ARM\INC\Philips" -o ".\hexFile\i2cwitharduino.o" --omf_browse ".\hexFile\i2cwitharduino.crf" --depend ".\hexFile\i2cwitharduino.d")
+F (..\test\arduino\I2cMasterReceiver.c)(0x5645B567)(-c --device DARMP -D__EVAL -g -O0 --apcs=interwork -I "C:\Keil\ARM\INC\Philips" -o ".\hexFile\i2cmasterreceiver.o" --omf_browse ".\hexFile\i2cmasterreceiver.crf" --depend ".\hexFile\i2cmasterreceiver.d")
 I (C:\Keil\ARM\INC\Philips\lpc214x.h)(0x4A02A636)
 I (..\test\arduino\uart0_rx_interrupt.h)(0x56447813)
