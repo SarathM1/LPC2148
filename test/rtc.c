@@ -7,92 +7,112 @@
 #define I2EN (1<<6)
 #define STAC (1<<5)
 #define SIC (1<<3)
-#define SA 0x68		  //Slave address
+#define AAC (1<<2)
 
-char flag= 'w';
 int cnt = 0;
 int res;
-int rtcInitFlag = 0;
+int flag = 0;
+char done = 1;
+int rw = 0;
 
-void i2c_start (void)
-{
-	I2C0CONCLR	=	STO;
-	I2C0CONSET	|=	STA;
-}
 
 
 void i2c_isr()__irq
 {
 	char status;
 	status = I2C0STAT;
-	uart_tx_int(status);
-	uart_tx_char('-');
+	//uart_tx_int(status);
+	//uart_tx_char('-');
 	switch(status)
 	{
 		case 8:	// START condtn transmitted
-			if(flag == 'w')
-			{
-				I2C0DAT = 0xD0;
-				I2C0CONCLR = SIC|STAC;
-				uart_tx_str("START transmitted\r\n");
-			}
-			else
-			{
-				I2C0DAT = 0xD1;
-				I2C0CONCLR = SIC|STAC;
-				uart_tx_str("START transmitted\r\n");
-			}
+			I2C0DAT = 0xD0;
+			I2C0CONCLR = SIC|STAC;
+			//uart_tx_str("START transmitted\r\n");
 			break;
 		case 32: // SA + W transmitted, NOT ACK received
 			I2C0CONSET |= STO;
 			I2C0CONCLR = SIC;
-			uart_tx_str("SLA+W transmitted, NOT ACK received\r\n");
+			//uart_tx_str("SLA+W transmitted, NOT ACK received\r\n");
 			break;		
 		case 24: // SA + W transmitted, ACK received
-			I2C0DAT = 0X00;
+			I2C0DAT = 0X04;
 			I2C0CONCLR = SIC;
-			uart_tx_str("SLA+W transmitted, ACK received\r\n");	
+			//uart_tx_str("SLA+W transmitted, ACK received\r\n");	
 			break;
 		case 40: //Data byte in I2C0DAT transmitted, ACK received
-//			if(rtcInitFlag ==0)
+//			if(flag==0)
 //			{
-//				I2C0DAT = 0X00;
+//				uart_tx_str("Word Address 0x00 transmitted, ACK received\r\n");
+//				I2C0DAT = 0X85;
 //				I2C0CONCLR = SIC;
-//				uart_tx_str("SLA+W transmitted, ACK received\r\n");
-//				rtcInitFlag++;
+//				flag = 1;
 //			}
-//			else if(rtcInitFlag == 10)
+//
+//			else
 //			{
-				I2C0CONSET |= STO;
-				I2C0CONCLR = SIC;
-				uart_tx_str("data byte transmitted, ACK received, Stopping\r\n");
-				rtcInitFlag = 1;
-				flag = 0;
+			//uart_tx_str("Data 0x00 transmitted, ACK received\r\n");
+			I2C0CONSET	|=	STA;
+			I2C0CONCLR = SIC;
+			rw = 1;
 //			}
 			break;
+		case 16:
+			I2C0DAT = 0xD1;
+			I2C0CONCLR = SIC|STAC;
+			//uart_tx_str("REPEATED START transmitted\r\n");
+			break;
 		case 64: // SLA + R transmitted, ACK recieved
-			uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
-			I2C0CONSET |= AA; 	  // To acknowledge Data received
+			//uart_tx_str("SLA + R transmitted, ACK recieved\r\n");
 			I2C0CONCLR = SIC;
 			break;
 		case 80: // Data byte has been received ACK returned
-			if(cnt < 1)
+			if(cnt <= 5 )
 			{
 				cnt++;
 				I2C0CONSET	|= AA;
-				uart_tx_str("Data byte has been received ACK returned\r\n");
 				uart_tx_str("Data = ");
 				res = I2C0DAT;
+				uart_tx_int( ((res & 0xf0) >> 4 ) );
+				uart_tx_int( (res & 0x0f) );
+				uart_tx_str("\t");
 				uart_tx_int(res);
 				uart_tx_str("\r\n");
+				//uart_tx_str("Data byte has been received ACK returned\r\n");
 				I2C0CONCLR = SIC;
 			}
 			else
 			{
-				I2C0CONSET |= STO;
+				cnt++;
+				I2C0CONCLR = AAC;
+				uart_tx_str("Data = ");
+				res = I2C0DAT;
+				uart_tx_int( ((res & 0xf0) >> 4 ) );
+				uart_tx_int( (res & 0x0f) );
+				uart_tx_str("\t");
+				uart_tx_int(res);
+				uart_tx_str("\r\n");
+				//uart_tx_str("Data byte has been received ACK returned\r\n");
 				I2C0CONCLR = SIC;
-				uart_tx_str("Stopping\r\n");
 			}
+//			else
+//			{
+//				I2C0CONSET |= STO;
+//				I2C0CONCLR = SIC|AAC;
+//				uart_tx_str("Stopping\r\n");
+//				uart_tx_str("-------------------------------------------------\r\n");
+//				done = 0;
+//				cnt = 0	; 		// Resetting all flags
+//			}
+			break;
+		case 88:
+			I2C0CONSET |= STO;
+			I2C0CONCLR = SIC|AAC;
+			//uart_tx_str("Data byte has been received, NOT ACK returned\r\n");
+			//uart_tx_str("Stopping . . \r\n");
+			uart_tx_str("-------------------------------------------------\r\n");
+			done = 0;
+			cnt = 0	; 		// Resetting all flags
 			break;
 		default:
 			while(1)			// Debugging
@@ -113,7 +133,7 @@ void i2c_write(char data)
 void i2c_init()
 {
 	PINSEL0 |= ((1<<4)|(1<<6));
-	I2C0CONSET	=  I2EN;
+	I2C0CONSET	=  I2EN|AA;
 	I2C0CONCLR = SIC;
 	I2C0SCLL = 180;		// i2C rate = PCLK/(SCLL + SCLH)
 	I2C0SCLH = 0;
@@ -124,21 +144,21 @@ void i2c_init()
 }
 
 
-void rtc_init()
-{
-	i2c_start();
-}
-
 int main()
 {
 	i2c_init();
 	uart_init();
-	rtc_init();
-	while(rtcInitFlag !=1);
-	//flag = 'w';
-	uart_tx_str("Starting Program\r\n");
-	i2c_start();
-	while(flag);
-	//i2c_start();
-	while(1);
+	uart_tx_str("Starting program!!\r\n");
+	while(1)
+	{
+		I2C0CONCLR = 0XFF;			// Clearin I2C0CONSET
+		I2C0CONSET	=  I2EN|AA;		// Enable I2C and set AA
+		I2C0CONSET	|=	STA;		// i2c start
+		while(rw==0);
+		I2C0CONSET = STA;
+		while(done);
+		done=1;
+		rw = 0;
+//		while(1);
+	}
 }
