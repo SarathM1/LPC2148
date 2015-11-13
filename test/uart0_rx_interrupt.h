@@ -26,16 +26,22 @@ void uart_tx_int(long int num)
 	char str[10];
 	int i,r,j;
 
-	for(i=0;i<4;i++,num/=10)
+	if(num==0)
 	{
-		r = num%10;
-		str[i] = r + 48;
+		uart_tx_char('0');
 	}
-	str[i]='\0';
-
-	for(j=i-1;j>=0;j--)
-		uart_tx_char(str[j]);
-
+	else
+	{
+		for(i=0;num>0;i++,num/=10)
+		{
+			r = num%10;
+			str[i] = r + 48;
+		}
+		str[i]='\0';
+	
+		for(j=i-1;j>=0;j--)
+			uart_tx_char(str[j]);
+	}
 }
 
 void uart_init()
