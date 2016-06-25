@@ -12,8 +12,8 @@ void uart_init()
 	U0LCR = 0x83;
 	
 	U0DLM = 0x00;
-	U0DLL = 117;
-	//U0FDR = (1<<0)| (1<<4);
+	U0DLL = 0xb4;
+	U0FDR = 0xC1;
 	
 	U0LCR = 0x03;
 
