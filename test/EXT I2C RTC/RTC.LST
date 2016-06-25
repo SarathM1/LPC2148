@@ -1,0 +1,1879 @@
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 1   
+
+
+ARM COMPILER V2.53, COMPILATION OF MODULE RTC
+OBJECT MODULE PLACED IN RTC.OBJ
+COMPILER INVOKED BY: C:\Program Files\ARM\BIN\CA.exe RTC.C THUMB BROWSE DEBUG TABS(4) 
+
+stmt  level    source
+
+    1          /***********************************************************************************************
+    2          ;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||;
+    3          ;|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~  Important Note ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|;
+    4          ;|~                                                                                         ~|;
+    5          ;|~     This part of the software coding is the sole property of the company!               ~|;
+    6          ;|~     Any unauthorized re-usage or transformation of this code is prohibited.             ~|;
+    7          ;|~                                                                                         ~|;
+    8          ;|~             © Pantech Solutions Pvt Ltd.  All rights Reserved                           ~|;
+    9          ;|~                                                                                         ~|;
+   10          ;|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|;
+   11          ;|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|;
+   12          ;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||;
+   13          ;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||;
+   14          ;|  Title       : I2C_RTC_Interface.c                                                        |;
+   15          ;|  Status      : Completed                                                                  |;
+   16          ;|  Features    : Program to RTC interface using I2C                                         |;
+   17          ;|  Description : I2C Used    :  P0.11 and P0.14 (I2C1 of ARM7TDMI)                          |;
+   18          ;|                                                                                           |;
+   19          ;|                                                                                           |;
+   20          ;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||;
+   21          ***********************************************************************************************/
+   22          
+   23          /************************************   Directives   *******************************************/
+   24          
+   25          #include <LPC214x.h>
+   26          #include <stdio.h>
+   27          #include <string.h>
+   28          #include <ctype.h>
+   29          #include <stdlib.h>
+   30          #include "UART.h"
+   31          
+   32          //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   33          /************************************    Macros     *******************************************/
+   34          #define MAX     8
+   35          #define AA      2
+   36          #define SI      3
+   37          #define STO     4
+   38          #define STA     5
+   39          #define I2EN    6
+   40          
+   41          #define ESC 0x1B
+   42          
+   43          #define SW3     1<<24
+   44          #define SW4     1<<25
+   45          #define SW5     1<<26
+   46          //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   47          /*<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<   Declarations  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>*/
+   48          //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   49          void I2C_ISR(void)__irq;
+   50          void UART0_ISR (void)__irq;
+   51          void Wait (unsigned int);
+   52          void I2C_Init (void);
+   53          
+   54          int I2C_Start (void);
+   55          int I2C_Write (unsigned char *Buff, unsigned int Count);
+   56          
+   57          char Buff[MAX]          =   {0x59/*CH + 10Sec + Sec*/,0x58/*Minutes*/,0x64/*0+ 12/24 + AM/PM + 10Hr + Hr*/,
+   58                                       0x04/*Wednesday*/, 0x04 /*Date*/, 0x11 /*Month-June*/, 0x09 /*Year*/
+   59                                      };
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 2   
+
+   60          
+   61          unsigned char Day[7][10]=   {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+   62          unsigned char Rec[MAX]  =   {"NO-DATA"};
+   63          unsigned char index     =   0;
+   64          unsigned char flag = 0, Ready=0;
+   65          int ii=0;
+   66          char Key;
+   67          
+   68          //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   69          //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+   70          
+   71          void Delay(void)
+   72          {
+   73   1          unsigned int i,j;
+   74   1          
+   75   1          for(i=0;i<150;i++)
+   76   1              for(j=0;j<900;j++);
+   77   1      }
+   78          
+   79          void Wait (unsigned int Delay)
+   80          {
+   81   1          while(Delay--);
+   82   1      }
+   83          
+   84          void I2C_Init (void)
+   85          {
+   86   1          I2C1SCLH    =   150;            //50%duty cycle .....   I2C Frequency ->100 KHz for PCLK = 30MHz 
+   87   1          I2C1SCLL    =   150;
+   88   1          I2C1CONSET  =   1 << I2EN;  //Enable I2C 0 
+   89   1      
+   90   1      }
+   91          
+   92          int I2C_Start (void)
+   93          {
+   94   1          I2C1CONCLR  =   1 << STO;
+   95   1          I2C1CONSET  =   1 << AA;
+   96   1      
+   97   1          I2C1CONSET  =   1 << STA;
+   98   1      
+   99   1          return 0;
+  100   1      }
+  101          
+  102          int I2C_Write (unsigned char *Buff, unsigned int Count)
+  103          {
+  104   1          while(Count--)
+  105   1          {
+  106   2              I2C1DAT     =   *Buff++;
+  107   2          }
+  108   1          return 0;
+  109   1      }
+  110          
+  111          void RTC_Setup(char *Buff)
+  112          {
+  113   1      
+  114   1          unsigned char TimE;
+  115   1          char i=0;
+  116   1      
+  117   1          for(i=0;i<2;i++)
+  118   1          {
+  119   2              while(!isdigit(Key));                   //Wait till Key = 0 to 9
+  120   2              if (i==0)
+  121   2              {
+  122   3                  TimE    =   Key - '0';
+  123   3                  TimE    <<= 4;
+  124   3              }
+  125   2              if (i==1)
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 3   
+
+  126   2              {
+  127   3                  TimE    |=  Key - '0';
+  128   3              }
+  129   2              //putchar(Key);
+  130   2              Key     =   0;
+  131   2      
+  132   2          }
+  133   1      
+  134   1          *Buff   =   TimE;                           //Load Setup New Value
+  135   1      }
+  136          
+  137          unsigned char BCD2HEX (unsigned char BCD)
+  138          {
+  139   1          unsigned char HEX;
+  140   1          HEX =   (BCD >> 4)*10 | (BCD & 0x0F);
+  141   1          return HEX;
+  142   1      }
+  143          
+  144          //------------------------------
+  145          //  Serial Port Initialize
+  146          //------------------------------
+  147          void serial_init(void)
+  148          {
+  149   1        PINSEL0 |= 0x00000005;           /* Enable RxD0 and TxD0                  */
+  150   1        U0LCR = 0x83;                   /* 8 bits, no Parity, 1 Stop bit          */
+  151   1        U0DLL = 195;                     /* 9600 Baud Rate @ 12MHz VPB Clock       */
+  152   1        U0LCR = 0x03;                   /* DLAB = 0                               */
+  153   1      }
+  154          
+  155          //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<   Main Function  >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  156          
+  157          
+  158          int main()
+  159          {
+  160   1          unsigned char i, AP;
+  161   1          VPBDIV  =   0x02;
+  162   1          PINSEL0 =   0x00000005;         // P0.3 - SDA0 and P0.2 - SCL0 
+  163   1          PINSEL0 |=  0x30C00000;
+  164   1          
+  165   1          IODIR1  =   0x00 << SW3;
+  166   1      
+  167   1          serial_init ();
+  168   1      
+  169   1          U0IER   =   3;
+  170   1      
+  171   1          VICIntSelect    = 0<<6;                     //UART0 ('0' - irq   '1'-fiq)
+  172   1          VICVectCntl6    = 0x020 | 6;                //VIC slot enabled
+  173   1          VICVectAddr6    = (unsigned long)UART0_ISR;//pass address of UART0
+  174   1          VICIntEnable    = 1 << 6;               //Enable  UART0 Interrupt
+  175   1      
+  176   1          VICIntSelect    = 0<<19;
+  177   1          VICVectCntl0    = 0x020 | 19 ;
+  178   1          VICVectAddr0    = (unsigned long)I2C_ISR;
+  179   1          VICIntEnable    = 1<<19;
+  180   1      
+  181   1          /*  Before the master transmitter mode
+  182   1              can be entered, the I2CONSET register must be initialized
+  183   1          */
+  184   1          printf("HI");
+  185   1      
+  186   1          I2C_Init();
+  187   1      
+  188   1          UART0_PutS ("\n\r********* ARM Tyro LPC2148 I2C RTC Demo **********\n\n\r");
+  189   1          UART0_PutS ("\r-------------------------------------------\n");
+  190   1          UART0_PutS("\n\rVersion Release v1.0 25/05/09\n");
+  191   1          UART0_PutS("\rResearch & Development Divison\n");   
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 4   
+
+  192   1          UART0_PutS("\r(c) Pantech Solutions Pvt Ltd.,\nwww.pantechsolutions.net\n");
+  193   1          UART0_PutS("\rChennai - India\n");
+  194   1          UART0_PutS ("\n\rDS1307 Ext RTC\n\n\r");
+  195   1              //UART0_PutS (">     Turn SW3 ON and Check Hyperteminal to Set Time...\n\r");
+  196   1          UART0_PutS ("\n\r___________________________________________________\n\n\r");   
+  197   1          Wait (5000);            
+  198   1          flag    =   'W';
+  199   1          I2C_Start ();
+  200   1      
+  201   1          for (i=0;i<30;i++)  Wait(10000);
+  202   1      
+  203   1          I2C1CONCLR  =   1 << SI;
+  204   1          printf ("\n\n\rTime");
+  205   1          printf ("\n\r------\n\n\r");
+  206   1          Delay();
+  207   1          while (1)
+  208   1          {
+  209   2      
+  210   2                  Wait (5000);Wait (5000);
+  211   2                  for (i=0;i<250;i++) Wait(10000);
+  212   2                  if (Ready == 'T')
+  213   2                  {
+  214   3                      AP = (Rec[3] & 0x40)?'P':'A';               
+  215   3                      ii = 1;
+  216   3                      Delay();
+  217   3                      printf ("%02x : %02x : %02x %cM | ",(Rec[3] & 0x1F), Rec[2], Rec[1], AP );
+  218   3                      Delay();Delay();
+  219   3                      printf ("%s, %02x / %02x / %02x \r", Day[Rec[4]-1], Rec[5], Rec[6], Rec[7]);
+  220   3                      Delay();Delay();
+  221   3                      Ready = 'F';
+  222   3                  }
+  223   2              }
+  224   1          
+  225   1      
+  226   1          
+  227   1      
+  228   1      }
+  229          
+  230          
+  231          void I2C_ISR(void) __irq
+  232          {
+  233   1          if (I2C1CONSET & 0x08)
+  234   1          {
+  235   2              
+  236   2      
+  237   2              switch (I2C1STAT)
+  238   2              {
+  239   3                  case (0x08) :/*... A START condition has been Transmitted...*/  
+  240   3      
+  241   3                                  if (flag == 'W')
+  242   3                                  {
+  243   4                                      I2C1CONCLR  =   1 << STO;
+  244   4                                      I2C1CONCLR  =   1 << STA;   //Clear START Bit
+  245   4                                      I2C1CONSET  =   1 << AA;
+  246   4                                      I2C1DAT     =   0xD0;       //Slave Addr + W  1010 p2 p1 p0 w
+  247   4                                      I2C1CONCLR  =   1 << SI;
+  248   4      
+  249   4                                  //  U0THR   =   'S';
+  250   4                                      
+  251   4                                  }
+  252   3                                  else if (flag == 'R')
+  253   3                                  {
+  254   4                                  
+  255   4                                      I2C1DAT     =   0xD0;       //Slave Addr + R  1010 p2 p1 p0 r   
+  256   4                                      I2C1CONSET  =   1 << STA;
+  257   4                                      I2C1CONCLR  =   1 << SI;
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 5   
+
+  258   4                                      
+  259   4                                      
+  260   4                                  //  U0THR   =   's';
+  261   4                                  }
+  262   3                                  index   =   0;
+  263   3                                  break;
+  264   3          
+  265   3                  case (0x10) :   /*...A repeated START condition has been Transmitted...*/
+  266   3      
+  267   3                                  I2C1CONCLR  =   1 << STA;   
+  268   3                                  if (flag == 'W')
+  269   3                                  {
+  270   4                                      I2C1DAT =   0xD0;       //Slave Addr + W  1010 p2 p1 p0 w
+  271   4                                  //  U0THR   =   'Q';
+  272   4                                  }
+  273   3                                  else if (flag == 'R')
+  274   3                                  {
+  275   4                                      //I2C1CONCLR    =   1 << STA;
+  276   4                                      I2C1DAT     =   0xD1;       //Slave Addr + R  1010 p2 p1 p0 r   
+  277   4                                      I2C1CONCLR  =   1 << STO;   
+  278   4                                      I2C1CONSET  =   1 << AA;
+  279   4                                      I2C1CONCLR  =   1 << SI;
+  280   4      
+  281   4                                      index = 0;
+  282   4                                  //  U0THR   =   'q';
+  283   4                                  }
+  284   3                                  
+  285   3                                  break;
+  286   3          
+  287   3                  case (0x18) :   /*....SLA+W has been transmitted; ACK has been received....*/
+  288   3      
+  289   3                                  if (flag == 'W')
+  290   3                                  {
+  291   4                                      I2C1DAT     =   0x00;
+  292   4                                      index=0;
+  293   4                                      I2C1CONCLR  =   1 << STA;       //Clear START Bit
+  294   4                                      I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+  295   4                                  //  U0THR   =   'D';
+  296   4                                  }
+  297   3                                  else
+  298   3                                  {
+  299   4                                      I2C1DAT =   0x00;
+  300   4                                      index   =   0;
+  301   4                                      I2C1CONCLR  =   1 << STA;       //Clear START Bit
+  302   4                                      I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+  303   4                                      I2C1CONSET  =   1 << AA;
+  304   4                                  //  U0THR   =   'd';
+  305   4                                  }
+  306   3                                  I2C1CONCLR  =   1 << SI;
+  307   3                                  break;
+  308   3          
+  309   3                  case (0x20) :   /*...SLA+W has been transmitted; NOT ACK has been received....*/
+  310   3      
+  311   3                                  if (flag == 'W')
+  312   3                                  {
+  313   4                                      I2C1DAT     &=  0x7F;
+  314   4                                      index=0;
+  315   4                                      I2C1CONCLR  =   1 << STA;       //Clear START Bit
+  316   4                                      I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+  317   4                                  //  U0THR   =   'E';
+  318   4                                  }
+  319   3                                  else
+  320   3                                  {
+  321   4                                      I2C1DAT =   0xD1;
+  322   4                                      index   =   0;
+  323   4                                      I2C1CONCLR  =   1 << STA;       //Clear START Bit
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 6   
+
+  324   4                                      I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+  325   4                                      I2C1CONSET  =   1 << AA;
+  326   4                                  //  U0THR   =   'e';
+  327   4                                  }
+  328   3                                  I2C1CONCLR  =   1 << SI;                            
+  329   3                                  break;
+  330   3          
+  331   3                  case (0x28) :   /*...Data byte in I2DAT has been transmitted; ACK has been received....*/
+  332   3      
+  333   3                                  if (index < MAX && flag == 'W')         // Place all the contents of Buff[] in I2C1DAT
+  334   3                                  {
+  335   4                                  
+  336   4                                      I2C1DAT     =   Buff[index];
+  337   4                                      I2C1CONCLR  =   0x20;       //Clear START Bit
+  338   4                                      I2C1CONCLR  =   0x38;       //Clear all flags (STA, STO, SI)
+  339   4                                      index++;
+  340   4                              //      U0THR   =   'F';
+  341   4                                  //  U0THR   =   'W';
+  342   4                                                                  
+  343   4                                  }
+  344   3                              
+  345   3                                  else if (flag == 'R')   //Generate a Repeated Start to jump to MST/REC Mode
+  346   3                                  {
+  347   4                                      I2C1CONCLR  =   1 << STO;
+  348   4                                      I2C1CONSET  =   1 << STA;
+  349   4                                      I2C1CONCLR  =   1 << SI;
+  350   4                                  //  U0THR   =   'J';
+  351   4                                          
+  352   4                                  }
+  353   3                                  
+  354   3                                  else                                //Stop Transmission to EEPROM.... Data Count Reset..
+  355   3                                  {
+  356   4                                      index = 0;
+  357   4                                      flag = 'R';
+  358   4                                      I2C1CONSET  =   1 << STO;       //Send STOP Bit
+  359   4                                      I2C1CONCLR  =   1 << AA;
+  360   4                                      //printf ("\n\r Data Successfully Written on Memory!\n");
+  361   4                                      I2C1CONSET  =   1 << STA;
+  362   4                                      I2C1CONCLR  =   1 << SI;
+  363   4                                  //  U0THR   =   'P';
+  364   4                                  }
+  365   3                                  break;
+  366   3          
+  367   3                  case (0x30) :   /*... Data byte in I2DAT has been transmitted; NOT ACK has been received ...*/
+  368   3      
+  369   3                              if (index < MAX && flag == 'W')         // Place all the contents of Buff[] in I2C1DAT
+  370   3                              {
+  371   4                                  
+  372   4                                  I2C1DAT     =   Buff[index];
+  373   4                                  I2C1CONCLR  =   0x20;       //Clear START Bit
+  374   4                                  I2C1CONCLR  =   0x38;       //Clear all flags (STA, STO, SI)
+  375   4                                  index++;
+  376   4                              //  U0THR   =   'G';
+  377   4                              //  U0THR   =   'W';
+  378   4                                                              
+  379   4                              }
+  380   3                              
+  381   3                              else if (flag == 'R')   //Generate a Repeated Start to jump to MST/REC Mode
+  382   3                              {
+  383   4                                  I2C1CONCLR  =   1 << STO;
+  384   4                                  I2C1CONSET  =   1 << STA;
+  385   4                                  I2C1CONCLR  =   1 << SI;
+  386   4                              //  U0THR   =   'j';
+  387   4                                      
+  388   4                              }
+  389   3                              
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 7   
+
+  390   3                              else                                //Stop Transmission to EEPROM.... Data Count Reset..
+  391   3                              {
+  392   4                                  index = 0;
+  393   4                                  flag = 'R';
+  394   4                                  I2C1CONSET  =   1 << STO;       //Send STOP Bit
+  395   4                                  I2C1CONCLR  =   1 << AA;
+  396   4                                  //printf ("\n\r Data Successfully Written on Memory!\n");
+  397   4                                  I2C1CONSET  =   1 << STA;
+  398   4                                  I2C1CONCLR  =   1 << SI;
+  399   4                              //  U0THR   =   'p';
+  400   4                              }
+  401   3                              break;
+  402   3          
+  403   3                  case (0x38) :   /*... Arbitration lost in SLA+R/W or Data bytes ....*/
+  404   3      
+  405   3                                  I2C1CONSET  =   0x20;
+  406   3                                  break;
+  407   3      
+  408   3                  case (0x40) :   /*... SLA+R has been transmitted; ACK has been received.*/
+  409   3                                  //index = 0;
+  410   3                                  if (index < MAX)
+  411   3                                  {
+  412   4                                      Rec [index] =   I2C1DAT;
+  413   4                                      index++;
+  414   4                                      I2C1CONSET  =   1 << AA;
+  415   4                                      I2C1CONCLR  =   1 << STA;
+  416   4                                      I2C1CONCLR  =   1 << STO;
+  417   4                                  }
+  418   3                                  else
+  419   3                                  {
+  420   4                                      index = 0;
+  421   4                                      I2C1CONCLR  =   1 << AA;
+  422   4                                      I2C1CONSET  =   1 << STO;
+  423   4                                      I2C1CONCLR  =   1 << STA;
+  424   4                                  }
+  425   3                              //  U0THR = 'y';
+  426   3                                  I2C1CONCLR  =   1 << SI;
+  427   3                                  break;
+  428   3      
+  429   3                  case (0x48) :   /*...SLA+R has been transmitted; NOT ACK has been received ...*/
+  430   3                              if (index < MAX)
+  431   3                                  {
+  432   4                                      Rec [index] =   I2C1DAT;
+  433   4                                      index++;
+  434   4                                      I2C1CONSET  =   1 << AA;
+  435   4                                      I2C1CONCLR  =   1 << STA;
+  436   4                                      I2C1CONCLR  =   1 << STO;
+  437   4                                  }
+  438   3                                  else
+  439   3                                  {
+  440   4                                      index = 0;
+  441   4                                      I2C1CONCLR  =   1 << AA;
+  442   4                                      I2C1CONSET  =   1 << STO;
+  443   4                                      I2C1CONCLR  =   1 << STA;
+  444   4                                  }
+  445   3                                  
+  446   3                                  I2C1CONCLR  =   1 << SI;
+  447   3                              //  U0THR = 'z';
+  448   3                          
+  449   3                                  break;
+  450   3      
+  451   3                  case (0x50) :   /*... Data byte has been received; ACK has been returned ....*/
+  452   3      
+  453   3                                  I2C1CONSET  =   1 << AA;    
+  454   3                                  if (index < MAX)
+  455   3                                  {
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 8   
+
+  456   4                                      Rec [index] =   I2C1DAT;
+  457   4                                      I2C1CONSET  =   1 << AA;
+  458   4                                      I2C1CONCLR  =   1 << STA;
+  459   4                                      I2C1CONCLR  =   1 << STO;
+  460   4                                      index++;
+  461   4                                  //  U0THR = 'x';
+  462   4                                  
+  463   4                                  }
+  464   3                                  else
+  465   3                                  {
+  466   4                                      I2C1CONCLR  =   1 << STO;
+  467   4                                      I2C1CONCLR  =   1 << AA;
+  468   4                                      //I2C1CONSET    =   1 << STA;
+  469   4                                      I2C1CONCLR  =   1 << SI;
+  470   4                                      index = 0;
+  471   4                                      Ready   =   'T';            //Make Ready TRUE after Reading is over!
+  472   4                                  //  U0THR = 'X';
+  473   4      
+  474   4                                  }
+  475   3                                  
+  476   3                                  break;
+  477   3      
+  478   3                  case (0x58) :   /*... Data byte has been received; NOT ACK has been returned ....*/
+  479   3                  
+  480   3                                  I2C1CONSET  =   1 << STO;
+  481   3                                  I2C1CONSET  =   1 << STA;
+  482   3                                  I2C1CONSET  =   1 << AA;
+  483   3                                  I2C1CONCLR  =   1 << SI;
+  484   3                                  flag = 'R';
+  485   3                                  index = 0;
+  486   3                                  Ready   =   'T';            //Make Ready TRUE after Reading is over!
+  487   3                                  //printf ("\n\rReading Done!!\n\r");
+  488   3                                  break;
+  489   3                                  
+  490   3              }
+  491   2          }
+  492   1          I2C1CONCLR  =   1 << SI;
+  493   1          VICVectAddr =   0x00;
+  494   1      
+  495   1      }
+  496          
+  497          
+  498          void UART0_ISR (void)__irq
+  499          {
+  500   1          
+  501   1          char Msg;
+  502   1      
+  503   1          if(((Msg = U0IIR) & 0x01) == 0)                 //Check Flag Status of Recieve Interrupt
+  504   1          {
+  505   2              switch  (Msg & 0x0E)                        //Filter Msg
+  506   2              {
+  507   3                  case 0x04:  while (!(U0LSR & 0x20));    //Recieve Data 
+  508   3                              Key = U0RBR;
+  509   3                              
+  510   3      
+  511   3                  case 0x02:  break;                      //THRE Interrupt
+  512   3      
+  513   3                  default  :  break;
+  514   3              }
+  515   2          }
+  516   1          VICVectAddr = 6;
+  517   1      
+  518   1      }
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 9   
+
+ASSEMBLY LISTING OF GENERATED OBJECT CODE
+
+
+
+*** EXTERNALS:
+ EXTERN CODE16 (printf?T)
+ EXTERN CODE16 (isdigit?T)
+ EXTERN CODE16 (UART0_PutS?T)
+ EXTERN NUMBER (__startup)
+
+
+
+*** PUBLICS:
+ PUBLIC         I2C_ISR?A
+ PUBLIC         UART0_ISR?A
+ PUBLIC         Wait?T
+ PUBLIC         I2C_Init?T
+ PUBLIC         I2C_Start?T
+ PUBLIC         I2C_Write?T
+ PUBLIC         Delay?T
+ PUBLIC         RTC_Setup?T
+ PUBLIC         BCD2HEX?T
+ PUBLIC         serial_init?T
+ PUBLIC         main
+ PUBLIC         Buff
+ PUBLIC         Day
+ PUBLIC         Rec
+ PUBLIC         index
+ PUBLIC         flag
+ PUBLIC         Ready
+ PUBLIC         ii
+ PUBLIC         Key
+
+
+
+*** DATA SEGMENT '?CON?RTC':
+ 00000000          ??S_21:
+ 00000000            DB          '%s, %02x / %02x / %02x ',0x0D,0x00
+ 00000019          ??S_20:
+ 00000019            DB          '%02x : %02x : %02x %cM | ',0x00
+ 00000033          ??S_19:
+ 00000033            DB          0x0A,0x0D,'------',0x0A,0x0A,0x0D,0x00
+ 0000003F          ??S_18:
+ 0000003F            DB          0x0A,0x0A,0x0D,'Time',0x00
+ 00000047          ??S_17:
+ 00000047            DB          0x0A,0x0D,'____________________________'
+ 00000065            DB          '_______________________',0x0A,0x0A,0x0D
+ 0000007F            DB          0x00
+ 00000080          ??S_16:
+ 00000080            DB          0x0A,0x0D,'DS1307 Ext RTC',0x0A,0x0A,0x0D
+ 00000093            DB          0x00
+ 00000094          ??S_15:
+ 00000094            DB          0x0D,'Chennai - India',0x0A,0x00
+ 000000A6          ??S_14:
+ 000000A6            DB          0x0D,'(c) Pantech Solutions Pvt Ltd.,',0x0A
+ 000000C7            DB          'www.pantechsolutions.net',0x0A,0x00
+ 000000E1          ??S_13:
+ 000000E1            DB          0x0D,'Research & Development Divison',0x0A
+ 00000101            DB          0x00
+ 00000102          ??S_12:
+ 00000102            DB          0x0A,0x0D,'Version Release v1.0 25/05/0'
+ 00000120            DB          '9',0x0A,0x00
+ 00000123          ??S_11:
+ 00000123            DB          0x0D,'---------------------------------'
+ 00000145            DB          '----------',0x0A,0x00
+ 00000151          ??S_10:
+ 00000151            DB          0x0A,0x0D,'********* ARM Tyro LPC2148 I'
+ 0000016F            DB          '2C RTC Demo **********',0x0A,0x0A,0x0D
+ 00000188            DB          0x00
+ 00000189          ??S_9:
+ 00000189            DB          'HI',0x00
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 10  
+
+
+*** DATA SEGMENT '?DT0?RTC':
+ 00000000          ii:
+ 00000000           BEGIN_INIT
+ 00000000  00000000  DD          0x0
+ 00000004           END_INIT
+ 00000004          Buff:
+ 00000004           BEGIN_INIT
+ 00000004  59        DB          0x59
+ 00000005  58        DB          0x58
+ 00000006  64        DB          0x64
+ 00000007  04        DB          0x4
+ 00000008  04        DB          0x4
+ 00000009  11        DB          0x11
+ 0000000A  09        DB          0x9
+ 0000000B            SPACE       1
+ 0000000C           END_INIT
+ 0000000C          Day:
+ 0000000C           BEGIN_INIT
+ 0000000C            DB          'Sunday',0x00
+ 00000013            SPACE       3
+ 00000016            DB          'Monday',0x00
+ 0000001D            SPACE       3
+ 00000020            DB          'Tuesday',0x00
+ 00000028            SPACE       2
+ 0000002A            DB          'Wednesday',0x00
+ 00000034            DB          'Thursday',0x00
+ 0000003D            SPACE       1
+ 0000003E            DB          'Friday',0x00
+ 00000045            SPACE       3
+ 00000048            DB          'Saturday',0x00
+ 00000051            SPACE       1
+ 00000052           END_INIT
+ 00000052          Rec:
+ 00000052           BEGIN_INIT
+ 00000052            DB          'NO-DATA',0x00
+ 0000005A           END_INIT
+ 0000005A          index:
+ 0000005A           BEGIN_INIT
+ 0000005A  00        DB          0x0
+ 0000005B           END_INIT
+ 0000005B          flag:
+ 0000005B           BEGIN_INIT
+ 0000005B  00        DB          0x0
+ 0000005C           END_INIT
+ 0000005C          Ready:
+ 0000005C           BEGIN_INIT
+ 0000005C  00        DB          0x0
+ 0000005D           END_INIT
+ 0000005D          Key:
+ 0000005D            DS          1
+
+
+
+*** CODE SEGMENT '?PR?Delay?T?RTC':
+   72: {
+ 00000000            ; SCOPE-START
+   75:     for(i=0;i<150;i++)
+ 00000000  2000      MOV         R0,#0x0
+ 00000002  ---- Variable 'i' assigned to Register 'R0' ----
+   76:         for(j=0;j<900;j++);
+ 00000002          L_10:
+ 00000002  2100      MOV         R1,#0x0
+ 00000004  ---- Variable 'j' assigned to Register 'R1' ----
+ 00000004          L_6:
+ 00000004  3101      ADD         R1,#0x1
+ 00000006  1C0A      MOV         R2,R1 ; j
+ 00000008  4BE1      LDR         R3,=0x384
+ 0000000A  429A      CMP         R2,R3 ; j
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 11  
+
+ 0000000C  D3FA      BCC         L_6  ; T=0x00000004
+ 0000000E  3001      ADD         R0,#0x1
+ 00000010  1C01      MOV         R1,R0 ; i
+ 00000012  2996      CMP         R1,#0x96 ; i
+ 00000014  D3F5      BCC         L_10  ; T=0x00000002
+ 00000016            ; SCOPE-END
+   77: }
+ 00000016  4770      BX          R14
+ 00000018          ENDP ; 'Delay?T'
+
+
+*** CODE SEGMENT '?PR?Wait?T?RTC':
+   79: void Wait (unsigned int Delay)
+ 00000000  ---- Variable 'Delay' assigned to Register 'R0' ----
+   81:     while(Delay--);
+ 00000000          L_11:
+ 00000000  1C01      MOV         R1,R0 ; Delay
+ 00000002  3801      SUB         R0,#0x1
+ 00000004  2900      CMP         R1,#0x0 ; Delay
+ 00000006  D1FB      BNE         L_11  ; T=0x00000000
+   82: }
+ 00000008  4770      BX          R14
+ 0000000A          ENDP ; 'Wait?T'
+
+
+*** CODE SEGMENT '?PR?I2C_Init?T?RTC':
+   86:     I2C1SCLH    =   150;            //50%duty cycle .....   I2C Frequency ->100 KHz for PCLK = 30MHz 
+ 00000000  2196      MOV         R1,#0x96
+ 00000002  4800      LDR         R0,=0xE005C010
+ 00000004  8001      STRH        R1,[R0,#0x0]
+   87:     I2C1SCLL    =   150;
+ 00000006  4800      LDR         R0,=0xE005C014
+ 00000008  8001      STRH        R1,[R0,#0x0]
+   88:     I2C1CONSET  =   1 << I2EN;  //Enable I2C 0 
+ 0000000A  2140      MOV         R1,#0x40
+ 0000000C  4800      LDR         R0,=0xE005C000
+ 0000000E  7001      STRB        R1,[R0,#0x0]
+   90: }
+ 00000010  4770      BX          R14
+ 00000012          ENDP ; 'I2C_Init?T'
+
+
+*** CODE SEGMENT '?PR?I2C_Start?T?RTC':
+   94:     I2C1CONCLR  =   1 << STO;
+ 00000000  2110      MOV         R1,#0x10
+ 00000002  4800      LDR         R0,=0xE005C018
+ 00000004  7001      STRB        R1,[R0,#0x0]
+   95:     I2C1CONSET  =   1 << AA;
+ 00000006  2104      MOV         R1,#0x4
+ 00000008  4800      LDR         R0,=0xE005C000
+ 0000000A  7001      STRB        R1,[R0,#0x0]
+   97:     I2C1CONSET  =   1 << STA;
+ 0000000C  2120      MOV         R1,#0x20
+ 0000000E  4800      LDR         R0,=0xE005C000
+ 00000010  7001      STRB        R1,[R0,#0x0]
+   99:     return 0;
+ 00000012  2000      MOV         R0,#0x0
+  100: }
+ 00000014  4770      BX          R14
+ 00000016          ENDP ; 'I2C_Start?T'
+
+
+*** CODE SEGMENT '?PR?I2C_Write?T?RTC':
+  102: int I2C_Write (unsigned char *Buff, unsigned int Count)
+ 00000000  ---- Variable 'Count' assigned to Register 'R1' ----
+ 00000000  ---- Variable 'Buff' assigned to Register 'R0' ----
+  104:     while(Count--)
+ 00000000  E004      B           L_16  ; T=0x0000000C
+ 00000002          L_18:
+  106:         I2C1DAT     =   *Buff++;
+ 00000002  1C02      MOV         R2,R0 ; Buff
+ 00000004  3001      ADD         R0,#0x1
+ 00000006  7813      LDRB        R3,[R2,#0x0] ; Buff
+ 00000008  4800      LDR         R2,=0xE005C008
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 12  
+
+ 0000000A  7013      STRB        R3,[R2,#0x0]
+  107:     }
+ 0000000C          L_16:
+ 0000000C  1C0A      MOV         R2,R1 ; Count
+ 0000000E  3901      SUB         R1,#0x1
+ 00000010  2A00      CMP         R2,#0x0 ; Count
+ 00000012  D1F6      BNE         L_18  ; T=0x00000002
+  108:     return 0;
+ 00000014  2000      MOV         R0,#0x0
+  109: }
+ 00000016  4770      BX          R14
+ 00000018          ENDP ; 'I2C_Write?T'
+
+
+*** CODE SEGMENT '?PR?RTC_Setup?T?RTC':
+  111: void RTC_Setup(char *Buff)
+ 00000000  B570      PUSH        {R4-R6,LR}
+ 00000002  1C05      MOV         R5,R0 ; Buff
+ 00000004  ---- Variable 'Buff' assigned to Register 'R5' ----
+ 00000004  ---- Variable 'TimE' assigned to Register 'R4' ----
+  112: {
+ 00000004            ; SCOPE-START
+  115:     char i=0;
+ 00000004  2000      MOV         R0,#0x0
+ 00000006  1C06      MOV         R6,R0 ; i
+ 00000008  ---- Variable 'i' assigned to Register 'R6' ----
+  117:     for(i=0;i<2;i++)
+ 00000008  1C06      MOV         R6,R0 ; i
+ 0000000A  E024      B           L_23  ; T=0x00000056
+  119:         while(!isdigit(Key));                   //Wait till Key = 0 to 9
+ 0000000C          L_29:
+ 0000000C          L_26:
+ 0000000C  4800      LDR         R0,=Key ; Key
+ 0000000E  7800      LDRB        R0,[R0,#0x0] ; Key
+ 00000010  F7FF      BL          isdigit?T  ; T=0x0001  (1)
+ 00000012  FFF6      BL          isdigit?T  ; T=0x0001  (2)
+ 00000014  2800      CMP         R0,#0x0 ; isdigit?T
+ 00000016  D0F9      BEQ         L_26  ; T=0x0000000C
+  120:         if (i==0)
+ 00000018  1C30      MOV         R0,R6 ; i
+ 0000001A  0600      LSL         R0,R0,#0x18 ; i
+ 0000001C  0E00      LSR         R0,R0,#0x18
+ 0000001E  2800      CMP         R0,#0x0
+ 00000020  D108      BNE         L_30  ; T=0x00000034
+  122:             TimE    =   Key - '0';
+ 00000022  4800      LDR         R0,=Key ; Key
+ 00000024  7800      LDRB        R0,[R0,#0x0] ; Key
+ 00000026  1C04      MOV         R4,R0
+ 00000028  3C30      SUB         R4,#0x30
+ 0000002A  0624      LSL         R4,R4,#0x18
+ 0000002C  0E24      LSR         R4,R4,#0x18
+  123:             TimE    <<= 4;
+ 0000002E  0124      LSL         R4,R4,#0x4 ; TimE
+ 00000030  0624      LSL         R4,R4,#0x18
+ 00000032  0E24      LSR         R4,R4,#0x18
+  124:         }
+ 00000034          L_30:
+  125:         if (i==1)
+ 00000034  1C30      MOV         R0,R6 ; i
+ 00000036  0600      LSL         R0,R0,#0x18 ; i
+ 00000038  0E00      LSR         R0,R0,#0x18
+ 0000003A  2801      CMP         R0,#0x1
+ 0000003C  D105      BNE         L_31  ; T=0x0000004A
+  127:             TimE    |=  Key - '0';
+ 0000003E  4800      LDR         R0,=Key ; Key
+ 00000040  7800      LDRB        R0,[R0,#0x0] ; Key
+ 00000042  3830      SUB         R0,#0x30
+ 00000044  0600      LSL         R0,R0,#0x18
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 13  
+
+ 00000046  0E00      LSR         R0,R0,#0x18
+ 00000048  4304      ORR         R4,R0
+  128:         }
+ 0000004A          L_31:
+  130:         Key     =   0;
+ 0000004A  2100      MOV         R1,#0x0
+ 0000004C  4800      LDR         R0,=Key ; Key
+ 0000004E  7001      STRB        R1,[R0,#0x0] ; Key
+  132:     }
+ 00000050  3601      ADD         R6,#0x1
+ 00000052  0636      LSL         R6,R6,#0x18
+ 00000054  0E36      LSR         R6,R6,#0x18
+ 00000056          L_23:
+ 00000056  1C30      MOV         R0,R6 ; i
+ 00000058  0600      LSL         R0,R0,#0x18 ; i
+ 0000005A  0E00      LSR         R0,R0,#0x18
+ 0000005C  2802      CMP         R0,#0x2
+ 0000005E  DBD5      BLT         L_29  ; T=0x0000000C
+  134:     *Buff   =   TimE;                           //Load Setup New Value
+ 00000060  1C21      MOV         R1,R4 ; TimE
+ 00000062  1C28      MOV         R0,R5 ; Buff
+ 00000064  7001      STRB        R1,[R0,#0x0] ; Buff
+ 00000066            ; SCOPE-END
+  135: }
+ 00000066  BC70      POP         {R4-R6}
+ 00000068  BC08      POP         {R3}
+ 0000006A  4718      BX          R3
+ 0000006C          ENDP ; 'RTC_Setup?T'
+
+
+*** CODE SEGMENT '?PR?BCD2HEX?T?RTC':
+  137: unsigned char BCD2HEX (unsigned char BCD)
+ 00000000  1C02      MOV         R2,R0 ; BCD
+ 00000002  ---- Variable 'BCD' assigned to Register 'R2' ----
+  138: {
+ 00000002            ; SCOPE-START
+  140:     HEX    =   (BCD >> 4)*10 | (BCD & 0x0F);
+ 00000002  1C10      MOV         R0,R2 ; BCD
+ 00000004  0601      LSL         R1,R0,#0x18 ; BCD
+ 00000006  0E09      LSR         R1,R1,#0x18
+ 00000008  0909      LSR         R1,R1,#0x4
+ 0000000A  200A      MOV         R0,#0xA
+ 0000000C  4341      MUL         R1,R0
+ 0000000E  1C10      MOV         R0,R2 ; BCD
+ 00000010  0600      LSL         R0,R0,#0x18 ; BCD
+ 00000012  0E00      LSR         R0,R0,#0x18
+ 00000014  220F      MOV         R2,#0xF
+ 00000016  4010      AND         R0,R2
+ 00000018  4301      ORR         R1,R0
+ 0000001A  0609      LSL         R1,R1,#0x18
+ 0000001C  0E09      LSR         R1,R1,#0x18
+ 0000001E  ---- Variable 'HEX' assigned to Register 'R1' ----
+  141:     return HEX;
+ 0000001E  1C08      MOV         R0,R1 ; HEX
+ 00000020  0600      LSL         R0,R0,#0x18 ; HEX
+ 00000022  0E00      LSR         R0,R0,#0x18
+ 00000024            ; SCOPE-END
+  142: }
+ 00000024  4770      BX          R14
+ 00000026          ENDP ; 'BCD2HEX?T'
+
+
+*** CODE SEGMENT '?PR?serial_init?T?RTC':
+  149:   PINSEL0 |= 0x00000005;           /* Enable RxD0 and TxD0                  */
+ 00000000  2205      MOV         R2,#0x5
+ 00000002  4800      LDR         R0,=0xE002C000
+ 00000004  6801      LDR         R1,[R0,#0x0]
+ 00000006  4311      ORR         R1,R2
+ 00000008  6001      STR         R1,[R0,#0x0]
+  150:   U0LCR = 0x83;                   /* 8 bits, no Parity, 1 Stop bit          */
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 14  
+
+ 0000000A  2183      MOV         R1,#0x83
+ 0000000C  4800      LDR         R0,=0xE000C00C
+ 0000000E  7001      STRB        R1,[R0,#0x0]
+  151:   U0DLL = 195;                     /* 9600 Baud Rate @ 12MHz VPB Clock       */
+ 00000010  21C3      MOV         R1,#0xC3
+ 00000012  4800      LDR         R0,=0xE000C000
+ 00000014  7001      STRB        R1,[R0,#0x0]
+  152:   U0LCR = 0x03;                   /* DLAB = 0                               */
+ 00000016  2103      MOV         R1,#0x3
+ 00000018  4800      LDR         R0,=0xE000C00C
+ 0000001A  7001      STRB        R1,[R0,#0x0]
+  153: }
+ 0000001C  4770      BX          R14
+ 0000001E          ENDP ; 'serial_init?T'
+
+
+*** CODE SEGMENT '?PR?main?RTC':
+  158: int main()
+ 00000000  B500      PUSH        {LR}
+  159: {
+ 00000002            ; SCOPE-START
+  161:     VPBDIV  =   0x02;
+ 00000002  2102      MOV         R1,#0x2
+ 00000004  4800      LDR         R0,=0xE01FC100
+ 00000006  7001      STRB        R1,[R0,#0x0]
+  162:     PINSEL0 =   0x00000005;         // P0.3 - SDA0 and P0.2 - SCL0 
+ 00000008  2105      MOV         R1,#0x5
+ 0000000A  4800      LDR         R0,=0xE002C000
+ 0000000C  6001      STR         R1,[R0,#0x0]
+  163:     PINSEL0 |=  0x30C00000;
+ 0000000E  4800      LDR         R2,=0x30C00000
+ 00000010  4800      LDR         R0,=0xE002C000
+ 00000012  6801      LDR         R1,[R0,#0x0]
+ 00000014  4311      ORR         R1,R2
+ 00000016  6001      STR         R1,[R0,#0x0]
+  165:     IODIR1  =   0x00 << SW3;
+ 00000018  2300      MOV         R3,#0x0
+ 0000001A  4800      LDR         R0,=0xE0028018
+ 0000001C  6003      STR         R3,[R0,#0x0]
+  167:     serial_init ();
+ 0000001E  F7FF      BL          serial_init?T  ; T=0x0001  (1)
+ 00000020  FFEF      BL          serial_init?T  ; T=0x0001  (2)
+  169:     U0IER   =   3;
+ 00000022  2103      MOV         R1,#0x3
+ 00000024  4800      LDR         R0,=0xE000C004
+ 00000026  6001      STR         R1,[R0,#0x0]
+  171:     VICIntSelect    = 0<<6;                     //UART0 ('0' - irq   '1'-fiq)
+ 00000028  4800      LDR         R0,=0xFFFFF00C
+ 0000002A  6003      STR         R3,[R0,#0x0]
+  172:     VICVectCntl6    = 0x020 | 6;                //VIC slot enabled
+ 0000002C  2126      MOV         R1,#0x26
+ 0000002E  4800      LDR         R0,=0xFFFFF218
+ 00000030  6001      STR         R1,[R0,#0x0]
+  173:     VICVectAddr6    = (unsigned long)UART0_ISR;//pass address of UART0
+ 00000032  4900      LDR         R1,=UART0_ISR?A ; UART0_ISR?A
+ 00000034  4800      LDR         R0,=0xFFFFF118
+ 00000036  6001      STR         R1,[R0,#0x0]
+  174:     VICIntEnable    = 1 << 6;               //Enable  UART0 Interrupt
+ 00000038  2140      MOV         R1,#0x40
+ 0000003A  4800      LDR         R0,=0xFFFFF010
+ 0000003C  6001      STR         R1,[R0,#0x0]
+  176:     VICIntSelect    = 0<<19;
+ 0000003E  4800      LDR         R0,=0xFFFFF00C
+ 00000040  6003      STR         R3,[R0,#0x0]
+  177:     VICVectCntl0    = 0x020 | 19 ;
+ 00000042  2133      MOV         R1,#0x33
+ 00000044  4800      LDR         R0,=0xFFFFF200
+ 00000046  6001      STR         R1,[R0,#0x0]
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 15  
+
+  178:     VICVectAddr0    = (unsigned long)I2C_ISR;
+ 00000048  4900      LDR         R1,=I2C_ISR?A ; I2C_ISR?A
+ 0000004A  4800      LDR         R0,=0xFFFFF100
+ 0000004C  6001      STR         R1,[R0,#0x0]
+  179:     VICIntEnable    = 1<<19;
+ 0000004E  4800      LDR         R1,=0x80000
+ 00000050  4800      LDR         R0,=0xFFFFF010
+ 00000052  6001      STR         R1,[R0,#0x0]
+  184:     printf("HI");
+ 00000054  4800      LDR         R0,=??S_9 ; ??S_9
+ 00000056  F7FF      BL          printf?T  ; T=0x0001  (1)
+ 00000058  FFD3      BL          printf?T  ; T=0x0001  (2)
+  186:     I2C_Init();
+ 0000005A  F7FF      BL          I2C_Init?T  ; T=0x0001  (1)
+ 0000005C  FFD1      BL          I2C_Init?T  ; T=0x0001  (2)
+  188:     UART0_PutS ("\n\r********* ARM Tyro LPC2148 I2C RTC Demo **********\n\n\r");
+ 0000005E  4800      LDR         R0,=??S_10 ; ??S_10
+ 00000060  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 00000062  FFCE      BL          UART0_PutS?T  ; T=0x0001  (2)
+  189:     UART0_PutS ("\r-------------------------------------------\n");
+ 00000064  4800      LDR         R0,=??S_11 ; ??S_11
+ 00000066  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 00000068  FFCB      BL          UART0_PutS?T  ; T=0x0001  (2)
+  190:     UART0_PutS("\n\rVersion Release v1.0 25/05/09\n");
+ 0000006A  4800      LDR         R0,=??S_12 ; ??S_12
+ 0000006C  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 0000006E  FFC8      BL          UART0_PutS?T  ; T=0x0001  (2)
+  191:     UART0_PutS("\rResearch & Development Divison\n");   
+ 00000070  4800      LDR         R0,=??S_13 ; ??S_13
+ 00000072  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 00000074  FFC5      BL          UART0_PutS?T  ; T=0x0001  (2)
+  192:     UART0_PutS("\r(c) Pantech Solutions Pvt Ltd.,\nwww.pantechsolutions.net\n");
+ 00000076  4800      LDR         R0,=??S_14 ; ??S_14
+ 00000078  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 0000007A  FFC2      BL          UART0_PutS?T  ; T=0x0001  (2)
+  193:     UART0_PutS("\rChennai - India\n");
+ 0000007C  4800      LDR         R0,=??S_15 ; ??S_15
+ 0000007E  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 00000080  FFBF      BL          UART0_PutS?T  ; T=0x0001  (2)
+  194:     UART0_PutS ("\n\rDS1307 Ext RTC\n\n\r");
+ 00000082  4800      LDR         R0,=??S_16 ; ??S_16
+ 00000084  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 00000086  FFBC      BL          UART0_PutS?T  ; T=0x0001  (2)
+  196:     UART0_PutS ("\n\r___________________________________________________\n\n\r");   
+ 00000088  4800      LDR         R0,=??S_17 ; ??S_17
+ 0000008A  F7FF      BL          UART0_PutS?T  ; T=0x0001  (1)
+ 0000008C  FFB9      BL          UART0_PutS?T  ; T=0x0001  (2)
+  197:     Wait (5000);            
+ 0000008E  4800      LDR         R0,=0x1388
+ 00000090  F7FF      BL          Wait?T  ; T=0x0001  (1)
+ 00000092  FFB6      BL          Wait?T  ; T=0x0001  (2)
+  198:     flag    =   'W';
+ 00000094  2157      MOV         R1,#0x57
+ 00000096  4800      LDR         R0,=flag ; flag
+ 00000098  7001      STRB        R1,[R0,#0x0] ; flag
+  199:     I2C_Start ();
+ 0000009A  F7FF      BL          I2C_Start?T  ; T=0x0001  (1)
+ 0000009C  FFB1      BL          I2C_Start?T  ; T=0x0001  (2)
+  201:     for (i=0;i<30;i++)  Wait(10000);
+ 0000009E  2400      MOV         R4,#0x0
+ 000000A0  ---- Variable 'i' assigned to Register 'R4' ----
+ 000000A0  E005      B           L_35  ; T=0x000000AE
+ 000000A2          L_36:
+ 000000A2  4800      LDR         R0,=0x2710
+ 000000A4  F7FF      BL          Wait?T  ; T=0x0001  (1)
+ 000000A6  FFAC      BL          Wait?T  ; T=0x0001  (2)
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 16  
+
+ 000000A8  3401      ADD         R4,#0x1
+ 000000AA  0624      LSL         R4,R4,#0x18
+ 000000AC  0E24      LSR         R4,R4,#0x18
+ 000000AE          L_35:
+ 000000AE  1C20      MOV         R0,R4 ; i
+ 000000B0  0600      LSL         R0,R0,#0x18 ; i
+ 000000B2  0E00      LSR         R0,R0,#0x18
+ 000000B4  281E      CMP         R0,#0x1E
+ 000000B6  DBF4      BLT         L_36  ; T=0x000000A2
+  203:     I2C1CONCLR  =   1 << SI;
+ 000000B8  2108      MOV         R1,#0x8
+ 000000BA  4800      LDR         R0,=0xE005C018
+ 000000BC  7001      STRB        R1,[R0,#0x0]
+  204:     printf ("\n\n\rTime");
+ 000000BE  4800      LDR         R0,=??S_18 ; ??S_18
+ 000000C0  F7FF      BL          printf?T  ; T=0x0001  (1)
+ 000000C2  FF9E      BL          printf?T  ; T=0x0001  (2)
+  205:     printf ("\n\r------\n\n\r");
+ 000000C4  4800      LDR         R0,=??S_19 ; ??S_19
+ 000000C6  F7FF      BL          printf?T  ; T=0x0001  (1)
+ 000000C8  FF9B      BL          printf?T  ; T=0x0001  (2)
+  206:     Delay();
+ 000000CA  F7FF      BL          Delay?T  ; T=0x0001  (1)
+ 000000CC  FF99      BL          Delay?T  ; T=0x0001  (2)
+  207:     while (1)
+ 000000CE          L_40:
+  210:             Wait (5000);Wait (5000);
+ 000000CE  4800      LDR         R0,=0x1388
+ 000000D0  F7FF      BL          Wait?T  ; T=0x0001  (1)
+ 000000D2  FF96      BL          Wait?T  ; T=0x0001  (2)
+ 000000D4  4800      LDR         R0,=0x1388
+ 000000D6  F7FF      BL          Wait?T  ; T=0x0001  (1)
+ 000000D8  FF93      BL          Wait?T  ; T=0x0001  (2)
+  211:             for (i=0;i<250;i++) Wait(10000);
+ 000000DA  2400      MOV         R4,#0x0
+ 000000DC  E005      B           L_44  ; T=0x000000EA
+ 000000DE          L_45:
+ 000000DE  4800      LDR         R0,=0x2710
+ 000000E0  F7FF      BL          Wait?T  ; T=0x0001  (1)
+ 000000E2  FF8E      BL          Wait?T  ; T=0x0001  (2)
+ 000000E4  3401      ADD         R4,#0x1
+ 000000E6  0624      LSL         R4,R4,#0x18
+ 000000E8  0E24      LSR         R4,R4,#0x18
+ 000000EA          L_44:
+ 000000EA  1C20      MOV         R0,R4 ; i
+ 000000EC  0600      LSL         R0,R0,#0x18 ; i
+ 000000EE  0E00      LSR         R0,R0,#0x18
+ 000000F0  28FA      CMP         R0,#0xFA
+ 000000F2  DBF4      BLT         L_45  ; T=0x000000DE
+  212:             if (Ready == 'T')
+ 000000F4  4800      LDR         R0,=Ready ; Ready
+ 000000F6  7800      LDRB        R0,[R0,#0x0] ; Ready
+ 000000F8  2854      CMP         R0,#0x54
+ 000000FA  D1E8      BNE         L_40  ; T=0x000000CE
+  214:                 AP = (Rec[3] & 0x40)?'P':'A';               
+ 000000FC  4800      LDR         R0,=Rec + 0x3 ; Rec+3
+ 000000FE  7800      LDRB        R0,[R0,#0x0] ; Rec+3
+ 00000100  2140      MOV         R1,#0x40
+ 00000102  4208      TST         R0,R1
+ 00000104  D001      BEQ         L_48  ; T=0x0000010A
+ 00000106  2550      MOV         R5,#0x50
+ 00000108  E000      B           L_49  ; T=0x0000010C
+ 0000010A          L_48:
+ 0000010A  2541      MOV         R5,#0x41
+ 0000010C          L_49:
+ 0000010C  062D      LSL         R5,R5,#0x18
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 17  
+
+ 0000010E  0E2D      LSR         R5,R5,#0x18
+ 00000110  ---- Variable 'AP' assigned to Register 'R5' ----
+  215:                 ii = 1;
+ 00000110  2101      MOV         R1,#0x1
+ 00000112  4800      LDR         R0,=ii ; ii
+ 00000114  6001      STR         R1,[R0,#0x0] ; ii
+  216:                 Delay();
+ 00000116  F7FF      BL          Delay?T  ; T=0x0001  (1)
+ 00000118  FF73      BL          Delay?T  ; T=0x0001  (2)
+  217:                 printf ("%02x : %02x : %02x %cM | ",(Rec[3] & 0x1F), Rec[2], Rec[1], AP );
+ 0000011A  1C28      MOV         R0,R5 ; AP
+ 0000011C  0600      LSL         R0,R0,#0x18 ; AP
+ 0000011E  0E00      LSR         R0,R0,#0x18
+ 00000120  B401      PUSH        {R0}
+ 00000122  4800      LDR         R0,=Rec + 0x3 ; Rec+3
+ 00000124  7800      LDRB        R0,[R0,#0x0] ; Rec+3
+ 00000126  1C01      MOV         R1,R0
+ 00000128  201F      MOV         R0,#0x1F
+ 0000012A  4001      AND         R1,R0
+ 0000012C  4800      LDR         R0,=Rec + 0x2 ; Rec+2
+ 0000012E  7800      LDRB        R0,[R0,#0x0] ; Rec+2
+ 00000130  1C02      MOV         R2,R0
+ 00000132  4800      LDR         R0,=Rec + 0x1 ; Rec+1
+ 00000134  7800      LDRB        R0,[R0,#0x0] ; Rec+1
+ 00000136  1C03      MOV         R3,R0
+ 00000138  4800      LDR         R0,=??S_20 ; ??S_20
+ 0000013A  F7FF      BL          printf?T  ; T=0x0001  (1)
+ 0000013C  FF61      BL          printf?T  ; T=0x0001  (2)
+ 0000013E  B001      ADD         R13,#0x4
+  218:                 Delay();Delay();
+ 00000140  F7FF      BL          Delay?T  ; T=0x0001  (1)
+ 00000142  FF5E      BL          Delay?T  ; T=0x0001  (2)
+ 00000144  F7FF      BL          Delay?T  ; T=0x0001  (1)
+ 00000146  FF5C      BL          Delay?T  ; T=0x0001  (2)
+  219:                 printf ("%s, %02x / %02x / %02x \r", Day[Rec[4]-1], Rec[5], Rec[6], Rec[7]);
+ 00000148  4800      LDR         R0,=Rec + 0x7 ; Rec+7
+ 0000014A  7800      LDRB        R0,[R0,#0x0] ; Rec+7
+ 0000014C  B401      PUSH        {R0}
+ 0000014E  4800      LDR         R0,=Rec + 0x4 ; Rec+4
+ 00000150  7800      LDRB        R0,[R0,#0x0] ; Rec+4
+ 00000152  210A      MOV         R1,#0xA
+ 00000154  4348      MUL         R0,R1
+ 00000156  4800      LDR         R1,=Day + 0xFFFFFFF6 ; Day-10
+ 00000158  1809      ADD         R1,R0 ; Day-10
+ 0000015A  4800      LDR         R0,=Rec + 0x5 ; Rec+5
+ 0000015C  7800      LDRB        R0,[R0,#0x0] ; Rec+5
+ 0000015E  1C02      MOV         R2,R0
+ 00000160  4800      LDR         R0,=Rec + 0x6 ; Rec+6
+ 00000162  7800      LDRB        R0,[R0,#0x0] ; Rec+6
+ 00000164  1C03      MOV         R3,R0
+ 00000166  4800      LDR         R0,=??S_21 ; ??S_21
+ 00000168  F7FF      BL          printf?T  ; T=0x0001  (1)
+ 0000016A  FF4A      BL          printf?T  ; T=0x0001  (2)
+ 0000016C  B001      ADD         R13,#0x4
+  220:                 Delay();Delay();
+ 0000016E  F7FF      BL          Delay?T  ; T=0x0001  (1)
+ 00000170  FF47      BL          Delay?T  ; T=0x0001  (2)
+ 00000172  F7FF      BL          Delay?T  ; T=0x0001  (1)
+ 00000174  FF45      BL          Delay?T  ; T=0x0001  (2)
+  221:                 Ready = 'F';
+ 00000176  2146      MOV         R1,#0x46
+ 00000178  4800      LDR         R0,=Ready ; Ready
+ 0000017A  7001      STRB        R1,[R0,#0x0] ; Ready
+  223:         }
+ 0000017C  E7A7      B           L_40  ; T=0x000000CE
+ 0000017E            ; SCOPE-END
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 18  
+
+  228: }
+ 0000017E  BC08      POP         {R3}
+ 00000180  4718      BX          R3
+ 00000182          ENDP ; 'main'
+
+
+*** CODE SEGMENT '?PR?I2C_ISR?A?RTC':
+  231: void I2C_ISR(void) __irq
+ 00000000  E92D001F  STMDB       R13!,{R0-R4}
+  233:     if (I2C1CONSET & 0x08)
+ 00000004  E5100000  LDR         R0,=0xE005C000
+ 00000008  E5D00000  LDRB        R0,[R0,#0x0]
+ 0000000C  E3100008  TST         R0,#0x0008
+ 00000010  0A00019A  BEQ         L_50  ; Targ=0x680
+  237:         switch (I2C1STAT)
+ 00000014  E5100000  LDR         R0,=0xE005C004
+ 00000018  E5D00000  LDRB        R0,[R0,#0x0]
+ 0000001C  E3500010  CMP         R0,#0x0010
+ 00000020  0A000036  BEQ         L_53  ; Targ=0x100
+ 00000024  E3500018  CMP         R0,#0x0018
+ 00000028  0A000051  BEQ         L_54  ; Targ=0x174
+ 0000002C  E3500020  CMP         R0,#0x0020
+ 00000030  0A000071  BEQ         L_55  ; Targ=0x1FC
+ 00000034  E3500028  CMP         R0,#0x0028
+ 00000038  0A000094  BEQ         L_56  ; Targ=0x290
+ 0000003C  E3500030  CMP         R0,#0x0030
+ 00000040  0A0000CA  BEQ         L_57  ; Targ=0x370
+ 00000044  E3500038  CMP         R0,#0x0038
+ 00000048  0A000100  BEQ         L_58  ; Targ=0x450
+ 0000004C  E3500040  CMP         R0,#0x0040
+ 00000050  0A000102  BEQ         L_59  ; Targ=0x460
+ 00000054  E3500048  CMP         R0,#0x0048
+ 00000058  0A000126  BEQ         L_60  ; Targ=0x4F8
+ 0000005C  E3500050  CMP         R0,#0x0050
+ 00000060  0A00014A  BEQ         L_61  ; Targ=0x590
+ 00000064  E3500058  CMP         R0,#0x0058
+ 00000068  0A00016F  BEQ         L_62  ; Targ=0x62C
+ 0000006C  E3500008  CMP         R0,#0x0008
+ 00000070  1A000182  BNE         L_50  ; Targ=0x680
+  239:             case (0x08) :/*... A START condition has been Transmitted...*/  
+ 00000074          L_52:
+  241:                             if (flag == 'W')
+ 00000074  E5100000  LDR         R0,=flag ; flag
+ 00000078  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 0000007C  E3500057  CMP         R0,#0x0057
+ 00000080  1A00000F  BNE         L_63  ; Targ=0xC4
+  243:                                 I2C1CONCLR  =   1 << STO;
+ 00000084  E3A02010  MOV         R2,#0x10
+ 00000088  E5101000  LDR         R1,=0xE005C018
+ 0000008C  E5C12000  STRB        R2,[R1,#0x0]
+  244:                                 I2C1CONCLR  =   1 << STA;   //Clear START Bit
+ 00000090  E3A02020  MOV         R2,#0x20
+ 00000094  E5101000  LDR         R1,=0xE005C018
+ 00000098  E5C12000  STRB        R2,[R1,#0x0]
+  245:                                 I2C1CONSET  =   1 << AA;
+ 0000009C  E3A02004  MOV         R2,#0x4
+ 000000A0  E5101000  LDR         R1,=0xE005C000
+ 000000A4  E5C12000  STRB        R2,[R1,#0x0]
+  246:                                 I2C1DAT     =   0xD0;       //Slave Addr + W  1010 p2 p1 p0 w
+ 000000A8  E3A020D0  MOV         R2,#0xD0
+ 000000AC  E5101000  LDR         R1,=0xE005C008
+ 000000B0  E5C12000  STRB        R2,[R1,#0x0]
+  247:                                 I2C1CONCLR  =   1 << SI;
+ 000000B4  E3A02008  MOV         R2,#0x8
+ 000000B8  E5101000  LDR         R1,=0xE005C018
+ 000000BC  E5C12000  STRB        R2,[R1,#0x0]
+  251:                             }
+ 000000C0  EA00000A  B           L_64  ; Targ=0xF0
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 19  
+
+ 000000C4          L_63:
+  252:                             else if (flag == 'R')
+ 000000C4  E3500052  CMP         R0,#0x0052
+ 000000C8  1A000008  BNE         L_64  ; Targ=0xF0
+  255:                                 I2C1DAT     =   0xD0;       //Slave Addr + R  1010 p2 p1 p0 r   
+ 000000CC  E3A010D0  MOV         R1,#0xD0
+ 000000D0  E5100000  LDR         R0,=0xE005C008
+ 000000D4  E5C01000  STRB        R1,[R0,#0x0]
+  256:                                 I2C1CONSET  =   1 << STA;
+ 000000D8  E3A01020  MOV         R1,#0x20
+ 000000DC  E5100000  LDR         R0,=0xE005C000
+ 000000E0  E5C01000  STRB        R1,[R0,#0x0]
+  257:                                 I2C1CONCLR  =   1 << SI;
+ 000000E4  E3A01008  MOV         R1,#0x8
+ 000000E8  E5100000  LDR         R0,=0xE005C018
+ 000000EC  E5C01000  STRB        R1,[R0,#0x0]
+  261:                             }
+ 000000F0          L_64:
+  262:                             index   =   0;
+ 000000F0  E3A01000  MOV         R1,#0x0
+ 000000F4  E5100000  LDR         R0,=index ; index
+ 000000F8  E5C01000  STRB        R1,[R0,#0x0] ; index
+  263:                             break;
+ 000000FC  EA00015F  B           L_50  ; Targ=0x680
+  265:             case (0x10) :   /*...A repeated START condition has been Transmitted...*/
+ 00000100          L_53:
+  267:                             I2C1CONCLR  =   1 << STA;   
+ 00000100  E3A01020  MOV         R1,#0x20
+ 00000104  E5100000  LDR         R0,=0xE005C018
+ 00000108  E5C01000  STRB        R1,[R0,#0x0]
+  268:                             if (flag == 'W')
+ 0000010C  E5100000  LDR         R0,=flag ; flag
+ 00000110  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 00000114  E3500057  CMP         R0,#0x0057
+ 00000118  1A000003  BNE         L_66  ; Targ=0x12C
+  270:                                 I2C1DAT =   0xD0;       //Slave Addr + W  1010 p2 p1 p0 w
+ 0000011C  E3A020D0  MOV         R2,#0xD0
+ 00000120  E5101000  LDR         R1,=0xE005C008
+ 00000124  E5C12000  STRB        R2,[R1,#0x0]
+  272:                             }
+ 00000128  EA000154  B           L_50  ; Targ=0x680
+ 0000012C          L_66:
+  273:                             else if (flag == 'R')
+ 0000012C  E3500052  CMP         R0,#0x0052
+ 00000130  1A000152  BNE         L_50  ; Targ=0x680
+  276:                                 I2C1DAT     =   0xD1;       //Slave Addr + R  1010 p2 p1 p0 r   
+ 00000134  E3A010D1  MOV         R1,#0xD1
+ 00000138  E5100000  LDR         R0,=0xE005C008
+ 0000013C  E5C01000  STRB        R1,[R0,#0x0]
+  277:                                 I2C1CONCLR  =   1 << STO;   
+ 00000140  E3A01010  MOV         R1,#0x10
+ 00000144  E5100000  LDR         R0,=0xE005C018
+ 00000148  E5C01000  STRB        R1,[R0,#0x0]
+  278:                                 I2C1CONSET  =   1 << AA;
+ 0000014C  E3A01004  MOV         R1,#0x4
+ 00000150  E5100000  LDR         R0,=0xE005C000
+ 00000154  E5C01000  STRB        R1,[R0,#0x0]
+  279:                                 I2C1CONCLR  =   1 << SI;
+ 00000158  E3A01008  MOV         R1,#0x8
+ 0000015C  E5100000  LDR         R0,=0xE005C018
+ 00000160  E5C01000  STRB        R1,[R0,#0x0]
+  281:                                 index = 0;
+ 00000164  E3A01000  MOV         R1,#0x0
+ 00000168  E5100000  LDR         R0,=index ; index
+ 0000016C  E5C01000  STRB        R1,[R0,#0x0] ; index
+  285:                             break;
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 20  
+
+ 00000170  EA000142  B           L_50  ; Targ=0x680
+  287:             case (0x18) :   /*....SLA+W has been transmitted; ACK has been received....*/
+ 00000174          L_54:
+  289:                             if (flag == 'W')
+ 00000174  E5100000  LDR         R0,=flag ; flag
+ 00000178  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 0000017C  E3500057  CMP         R0,#0x0057
+ 00000180  1A00000B  BNE         L_69  ; Targ=0x1B4
+  291:                                 I2C1DAT     =   0x00;
+ 00000184  E3A01000  MOV         R1,#0x0
+ 00000188  E5100000  LDR         R0,=0xE005C008
+ 0000018C  E5C01000  STRB        R1,[R0,#0x0]
+  292:                                 index=0;
+ 00000190  E5100000  LDR         R0,=index ; index
+ 00000194  E5C01000  STRB        R1,[R0,#0x0] ; index
+  293:                                 I2C1CONCLR  =   1 << STA;       //Clear START Bit
+ 00000198  E3A01020  MOV         R1,#0x20
+ 0000019C  E5100000  LDR         R0,=0xE005C018
+ 000001A0  E5C01000  STRB        R1,[R0,#0x0]
+  294:                                 I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+ 000001A4  E3A01010  MOV         R1,#0x10
+ 000001A8  E5100000  LDR         R0,=0xE005C018
+ 000001AC  E5C01000  STRB        R1,[R0,#0x0]
+  296:                             }
+ 000001B0  EA00000D  B           L_70  ; Targ=0x1EC
+ 000001B4          L_69:
+  299:                                 I2C1DAT =   0x00;
+ 000001B4  E3A01000  MOV         R1,#0x0
+ 000001B8  E5100000  LDR         R0,=0xE005C008
+ 000001BC  E5C01000  STRB        R1,[R0,#0x0]
+  300:                                 index   =   0;
+ 000001C0  E5100000  LDR         R0,=index ; index
+ 000001C4  E5C01000  STRB        R1,[R0,#0x0] ; index
+  301:                                 I2C1CONCLR  =   1 << STA;       //Clear START Bit
+ 000001C8  E3A01020  MOV         R1,#0x20
+ 000001CC  E5100000  LDR         R0,=0xE005C018
+ 000001D0  E5C01000  STRB        R1,[R0,#0x0]
+  302:                                 I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+ 000001D4  E3A01010  MOV         R1,#0x10
+ 000001D8  E5100000  LDR         R0,=0xE005C018
+ 000001DC  E5C01000  STRB        R1,[R0,#0x0]
+  303:                                 I2C1CONSET  =   1 << AA;
+ 000001E0  E3A01004  MOV         R1,#0x4
+ 000001E4  E5100000  LDR         R0,=0xE005C000
+ 000001E8  E5C01000  STRB        R1,[R0,#0x0]
+  305:                             }
+ 000001EC          L_70:
+  306:                             I2C1CONCLR  =   1 << SI;
+ 000001EC  E3A01008  MOV         R1,#0x8
+ 000001F0  E5100000  LDR         R0,=0xE005C018
+ 000001F4  E5C01000  STRB        R1,[R0,#0x0]
+  307:                             break;
+ 000001F8  EA000120  B           L_50  ; Targ=0x680
+  309:             case (0x20) :   /*...SLA+W has been transmitted; NOT ACK has been received....*/
+ 000001FC          L_55:
+  311:                             if (flag == 'W')
+ 000001FC  E5100000  LDR         R0,=flag ; flag
+ 00000200  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 00000204  E3500057  CMP         R0,#0x0057
+ 00000208  1A00000D  BNE         L_71  ; Targ=0x244
+  313:                                 I2C1DAT     &=  0x7F;
+ 0000020C  E5100000  LDR         R0,=0xE005C008
+ 00000210  E5D01000  LDRB        R1,[R0,#0x0]
+ 00000214  E201107F  AND         R1,R1,#0x007F
+ 00000218  E5C01000  STRB        R1,[R0,#0x0]
+  314:                                 index=0;
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 21  
+
+ 0000021C  E3A01000  MOV         R1,#0x0
+ 00000220  E5100000  LDR         R0,=index ; index
+ 00000224  E5C01000  STRB        R1,[R0,#0x0] ; index
+  315:                                 I2C1CONCLR  =   1 << STA;       //Clear START Bit
+ 00000228  E3A01020  MOV         R1,#0x20
+ 0000022C  E5100000  LDR         R0,=0xE005C018
+ 00000230  E5C01000  STRB        R1,[R0,#0x0]
+  316:                                 I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+ 00000234  E3A01010  MOV         R1,#0x10
+ 00000238  E5100000  LDR         R0,=0xE005C018
+ 0000023C  E5C01000  STRB        R1,[R0,#0x0]
+  318:                             }
+ 00000240  EA00000E  B           L_72  ; Targ=0x280
+ 00000244          L_71:
+  321:                                 I2C1DAT =   0xD1;
+ 00000244  E3A010D1  MOV         R1,#0xD1
+ 00000248  E5100000  LDR         R0,=0xE005C008
+ 0000024C  E5C01000  STRB        R1,[R0,#0x0]
+  322:                                 index   =   0;
+ 00000250  E3A01000  MOV         R1,#0x0
+ 00000254  E5100000  LDR         R0,=index ; index
+ 00000258  E5C01000  STRB        R1,[R0,#0x0] ; index
+  323:                                 I2C1CONCLR  =   1 << STA;       //Clear START Bit
+ 0000025C  E3A01020  MOV         R1,#0x20
+ 00000260  E5100000  LDR         R0,=0xE005C018
+ 00000264  E5C01000  STRB        R1,[R0,#0x0]
+  324:                                 I2C1CONCLR  =   1 << STO;       //Clear all flags (STA, STO, SI)
+ 00000268  E3A01010  MOV         R1,#0x10
+ 0000026C  E5100000  LDR         R0,=0xE005C018
+ 00000270  E5C01000  STRB        R1,[R0,#0x0]
+  325:                                 I2C1CONSET  =   1 << AA;
+ 00000274  E3A01004  MOV         R1,#0x4
+ 00000278  E5100000  LDR         R0,=0xE005C000
+ 0000027C  E5C01000  STRB        R1,[R0,#0x0]
+  327:                             }
+ 00000280          L_72:
+  328:                             I2C1CONCLR  =   1 << SI;                            
+ 00000280  E3A01008  MOV         R1,#0x8
+ 00000284  E5100000  LDR         R0,=0xE005C018
+ 00000288  E5C01000  STRB        R1,[R0,#0x0]
+  329:                             break;
+ 0000028C  EA0000FB  B           L_50  ; Targ=0x680
+  331:             case (0x28) :   /*...Data byte in I2DAT has been transmitted; ACK has been received....*/
+ 00000290          L_56:
+  333:                             if (index < MAX && flag == 'W')         // Place all the contents of Buff[] in I2C1DAT
+ 00000290  E5100000  LDR         R0,=index ; index
+ 00000294  E5D01000  LDRB        R1,[R0,#0x0] ; index
+ 00000298  E1A02001  MOV         R2,R1
+ 0000029C  E3520008  CMP         R2,#0x0008
+ 000002A0  AA000011  BGE         L_73  ; Targ=0x2EC
+ 000002A4  E5100000  LDR         R0,=flag ; flag
+ 000002A8  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 000002AC  E3500057  CMP         R0,#0x0057
+ 000002B0  1A00000D  BNE         L_73  ; Targ=0x2EC
+  336:                                 I2C1DAT     =   Buff[index];
+ 000002B4  E5100000  LDR         R0,=Buff ; Buff
+ 000002B8  E7D02002  LDRB        R2,[R0,+R2]
+ 000002BC  E5100000  LDR         R0,=0xE005C008
+ 000002C0  E5C02000  STRB        R2,[R0,#0x0]
+  337:                                 I2C1CONCLR  =   0x20;       //Clear START Bit
+ 000002C4  E3A02020  MOV         R2,#0x20
+ 000002C8  E5100000  LDR         R0,=0xE005C018
+ 000002CC  E5C02000  STRB        R2,[R0,#0x0]
+  338:                                 I2C1CONCLR  =   0x38;       //Clear all flags (STA, STO, SI)
+ 000002D0  E3A02038  MOV         R2,#0x38
+ 000002D4  E5100000  LDR         R0,=0xE005C018
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 22  
+
+ 000002D8  E5C02000  STRB        R2,[R0,#0x0]
+  339:                                 index++;
+ 000002DC  E5100000  LDR         R0,=index ; index
+ 000002E0  E2811001  ADD         R1,R1,#0x0001
+ 000002E4  E5C01000  STRB        R1,[R0,#0x0] ; index
+  343:                             }
+ 000002E8  EA0000E4  B           L_50  ; Targ=0x680
+ 000002EC          L_73:
+  345:                             else if (flag == 'R')   //Generate a Repeated Start to jump to MST/REC Mode
+ 000002EC  E5100000  LDR         R0,=flag ; flag
+ 000002F0  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 000002F4  E3500052  CMP         R0,#0x0052
+ 000002F8  1A000009  BNE         L_75  ; Targ=0x324
+  347:                                 I2C1CONCLR  =   1 << STO;
+ 000002FC  E3A01010  MOV         R1,#0x10
+ 00000300  E5100000  LDR         R0,=0xE005C018
+ 00000304  E5C01000  STRB        R1,[R0,#0x0]
+  348:                                 I2C1CONSET  =   1 << STA;
+ 00000308  E3A01020  MOV         R1,#0x20
+ 0000030C  E5100000  LDR         R0,=0xE005C000
+ 00000310  E5C01000  STRB        R1,[R0,#0x0]
+  349:                                 I2C1CONCLR  =   1 << SI;
+ 00000314  E3A01008  MOV         R1,#0x8
+ 00000318  E5100000  LDR         R0,=0xE005C018
+ 0000031C  E5C01000  STRB        R1,[R0,#0x0]
+  352:                             }
+ 00000320  EA0000D6  B           L_50  ; Targ=0x680
+ 00000324          L_75:
+  356:                                 index = 0;
+ 00000324  E3A01000  MOV         R1,#0x0
+ 00000328  E5100000  LDR         R0,=index ; index
+ 0000032C  E5C01000  STRB        R1,[R0,#0x0] ; index
+  357:                                 flag = 'R';
+ 00000330  E3A01052  MOV         R1,#0x52
+ 00000334  E5100000  LDR         R0,=flag ; flag
+ 00000338  E5C01000  STRB        R1,[R0,#0x0] ; flag
+  358:                                 I2C1CONSET  =   1 << STO;       //Send STOP Bit
+ 0000033C  E3A01010  MOV         R1,#0x10
+ 00000340  E5100000  LDR         R0,=0xE005C000
+ 00000344  E5C01000  STRB        R1,[R0,#0x0]
+  359:                                 I2C1CONCLR  =   1 << AA;
+ 00000348  E3A01004  MOV         R1,#0x4
+ 0000034C  E5100000  LDR         R0,=0xE005C018
+ 00000350  E5C01000  STRB        R1,[R0,#0x0]
+  361:                                 I2C1CONSET  =   1 << STA;
+ 00000354  E3A01020  MOV         R1,#0x20
+ 00000358  E5100000  LDR         R0,=0xE005C000
+ 0000035C  E5C01000  STRB        R1,[R0,#0x0]
+  362:                                 I2C1CONCLR  =   1 << SI;
+ 00000360  E3A01008  MOV         R1,#0x8
+ 00000364  E5100000  LDR         R0,=0xE005C018
+ 00000368  E5C01000  STRB        R1,[R0,#0x0]
+  365:                             break;
+ 0000036C  EA0000C3  B           L_50  ; Targ=0x680
+  367:             case (0x30) :   /*... Data byte in I2DAT has been transmitted; NOT ACK has been received ...*/
+ 00000370          L_57:
+  369:                         if (index < MAX && flag == 'W')         // Place all the contents of Buff[] in I2C1DAT
+ 00000370  E5100000  LDR         R0,=index ; index
+ 00000374  E5D01000  LDRB        R1,[R0,#0x0] ; index
+ 00000378  E1A02001  MOV         R2,R1
+ 0000037C  E3520008  CMP         R2,#0x0008
+ 00000380  AA000011  BGE         L_77  ; Targ=0x3CC
+ 00000384  E5100000  LDR         R0,=flag ; flag
+ 00000388  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 0000038C  E3500057  CMP         R0,#0x0057
+ 00000390  1A00000D  BNE         L_77  ; Targ=0x3CC
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 23  
+
+  372:                             I2C1DAT     =   Buff[index];
+ 00000394  E5100000  LDR         R0,=Buff ; Buff
+ 00000398  E7D02002  LDRB        R2,[R0,+R2]
+ 0000039C  E5100000  LDR         R0,=0xE005C008
+ 000003A0  E5C02000  STRB        R2,[R0,#0x0]
+  373:                             I2C1CONCLR  =   0x20;       //Clear START Bit
+ 000003A4  E3A02020  MOV         R2,#0x20
+ 000003A8  E5100000  LDR         R0,=0xE005C018
+ 000003AC  E5C02000  STRB        R2,[R0,#0x0]
+  374:                             I2C1CONCLR  =   0x38;       //Clear all flags (STA, STO, SI)
+ 000003B0  E3A02038  MOV         R2,#0x38
+ 000003B4  E5100000  LDR         R0,=0xE005C018
+ 000003B8  E5C02000  STRB        R2,[R0,#0x0]
+  375:                             index++;
+ 000003BC  E5100000  LDR         R0,=index ; index
+ 000003C0  E2811001  ADD         R1,R1,#0x0001
+ 000003C4  E5C01000  STRB        R1,[R0,#0x0] ; index
+  379:                         }
+ 000003C8  EA0000AC  B           L_50  ; Targ=0x680
+ 000003CC          L_77:
+  381:                         else if (flag == 'R')   //Generate a Repeated Start to jump to MST/REC Mode
+ 000003CC  E5100000  LDR         R0,=flag ; flag
+ 000003D0  E5D00000  LDRB        R0,[R0,#0x0] ; flag
+ 000003D4  E3500052  CMP         R0,#0x0052
+ 000003D8  1A000009  BNE         L_79  ; Targ=0x404
+  383:                             I2C1CONCLR  =   1 << STO;
+ 000003DC  E3A01010  MOV         R1,#0x10
+ 000003E0  E5100000  LDR         R0,=0xE005C018
+ 000003E4  E5C01000  STRB        R1,[R0,#0x0]
+  384:                             I2C1CONSET  =   1 << STA;
+ 000003E8  E3A01020  MOV         R1,#0x20
+ 000003EC  E5100000  LDR         R0,=0xE005C000
+ 000003F0  E5C01000  STRB        R1,[R0,#0x0]
+  385:                             I2C1CONCLR  =   1 << SI;
+ 000003F4  E3A01008  MOV         R1,#0x8
+ 000003F8  E5100000  LDR         R0,=0xE005C018
+ 000003FC  E5C01000  STRB        R1,[R0,#0x0]
+  388:                         }
+ 00000400  EA00009E  B           L_50  ; Targ=0x680
+ 00000404          L_79:
+  392:                             index = 0;
+ 00000404  E3A01000  MOV         R1,#0x0
+ 00000408  E5100000  LDR         R0,=index ; index
+ 0000040C  E5C01000  STRB        R1,[R0,#0x0] ; index
+  393:                             flag = 'R';
+ 00000410  E3A01052  MOV         R1,#0x52
+ 00000414  E5100000  LDR         R0,=flag ; flag
+ 00000418  E5C01000  STRB        R1,[R0,#0x0] ; flag
+  394:                             I2C1CONSET  =   1 << STO;       //Send STOP Bit
+ 0000041C  E3A01010  MOV         R1,#0x10
+ 00000420  E5100000  LDR         R0,=0xE005C000
+ 00000424  E5C01000  STRB        R1,[R0,#0x0]
+  395:                             I2C1CONCLR  =   1 << AA;
+ 00000428  E3A01004  MOV         R1,#0x4
+ 0000042C  E5100000  LDR         R0,=0xE005C018
+ 00000430  E5C01000  STRB        R1,[R0,#0x0]
+  397:                             I2C1CONSET  =   1 << STA;
+ 00000434  E3A01020  MOV         R1,#0x20
+ 00000438  E5100000  LDR         R0,=0xE005C000
+ 0000043C  E5C01000  STRB        R1,[R0,#0x0]
+  398:                             I2C1CONCLR  =   1 << SI;
+ 00000440  E3A01008  MOV         R1,#0x8
+ 00000444  E5100000  LDR         R0,=0xE005C018
+ 00000448  E5C01000  STRB        R1,[R0,#0x0]
+  401:                         break;
+ 0000044C  EA00008B  B           L_50  ; Targ=0x680
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 24  
+
+  403:             case (0x38) :   /*... Arbitration lost in SLA+R/W or Data bytes ....*/
+ 00000450          L_58:
+  405:                             I2C1CONSET  =   0x20;
+ 00000450  E3A01020  MOV         R1,#0x20
+ 00000454  E5100000  LDR         R0,=0xE005C000
+ 00000458  E5C01000  STRB        R1,[R0,#0x0]
+  406:                             break;
+ 0000045C  EA000087  B           L_50  ; Targ=0x680
+  408:             case (0x40) :   /*... SLA+R has been transmitted; ACK has been received.*/
+ 00000460          L_59:
+  410:                             if (index < MAX)
+ 00000460  E5100000  LDR         R0,=index ; index
+ 00000464  E5D01000  LDRB        R1,[R0,#0x0] ; index
+ 00000468  E1A03001  MOV         R3,R1
+ 0000046C  E3530008  CMP         R3,#0x0008
+ 00000470  AA000010  BGE         L_81  ; Targ=0x4B8
+  412:                                 Rec [index] =   I2C1DAT;
+ 00000474  E5100000  LDR         R0,=0xE005C008
+ 00000478  E5D00000  LDRB        R0,[R0,#0x0]
+ 0000047C  E5102000  LDR         R2,=Rec ; Rec
+ 00000480  E7C20003  STRB        R0,[R2,+R3]
+  413:                                 index++;
+ 00000484  E5100000  LDR         R0,=index ; index
+ 00000488  E2811001  ADD         R1,R1,#0x0001
+ 0000048C  E5C01000  STRB        R1,[R0,#0x0] ; index
+  414:                                 I2C1CONSET  =   1 << AA;
+ 00000490  E3A01004  MOV         R1,#0x4
+ 00000494  E5100000  LDR         R0,=0xE005C000
+ 00000498  E5C01000  STRB        R1,[R0,#0x0]
+  415:                                 I2C1CONCLR  =   1 << STA;
+ 0000049C  E3A01020  MOV         R1,#0x20
+ 000004A0  E5100000  LDR         R0,=0xE005C018
+ 000004A4  E5C01000  STRB        R1,[R0,#0x0]
+  416:                                 I2C1CONCLR  =   1 << STO;
+ 000004A8  E3A01010  MOV         R1,#0x10
+ 000004AC  E5100000  LDR         R0,=0xE005C018
+ 000004B0  E5C01000  STRB        R1,[R0,#0x0]
+  417:                             }
+ 000004B4  EA00000B  B           L_82  ; Targ=0x4E8
+ 000004B8          L_81:
+  420:                                 index = 0;
+ 000004B8  E3A01000  MOV         R1,#0x0
+ 000004BC  E5100000  LDR         R0,=index ; index
+ 000004C0  E5C01000  STRB        R1,[R0,#0x0] ; index
+  421:                                 I2C1CONCLR  =   1 << AA;
+ 000004C4  E3A01004  MOV         R1,#0x4
+ 000004C8  E5100000  LDR         R0,=0xE005C018
+ 000004CC  E5C01000  STRB        R1,[R0,#0x0]
+  422:                                 I2C1CONSET  =   1 << STO;
+ 000004D0  E3A01010  MOV         R1,#0x10
+ 000004D4  E5100000  LDR         R0,=0xE005C000
+ 000004D8  E5C01000  STRB        R1,[R0,#0x0]
+  423:                                 I2C1CONCLR  =   1 << STA;
+ 000004DC  E3A01020  MOV         R1,#0x20
+ 000004E0  E5100000  LDR         R0,=0xE005C018
+ 000004E4  E5C01000  STRB        R1,[R0,#0x0]
+  424:                             }
+ 000004E8          L_82:
+  426:                             I2C1CONCLR  =   1 << SI;
+ 000004E8  E3A01008  MOV         R1,#0x8
+ 000004EC  E5100000  LDR         R0,=0xE005C018
+ 000004F0  E5C01000  STRB        R1,[R0,#0x0]
+  427:                             break;
+ 000004F4  EA000061  B           L_50  ; Targ=0x680
+  429:             case (0x48) :   /*...SLA+R has been transmitted; NOT ACK has been received ...*/
+ 000004F8          L_60:
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 25  
+
+  430:                         if (index < MAX)
+ 000004F8  E5100000  LDR         R0,=index ; index
+ 000004FC  E5D01000  LDRB        R1,[R0,#0x0] ; index
+ 00000500  E1A03001  MOV         R3,R1
+ 00000504  E3530008  CMP         R3,#0x0008
+ 00000508  AA000010  BGE         L_83  ; Targ=0x550
+  432:                                 Rec [index] =   I2C1DAT;
+ 0000050C  E5100000  LDR         R0,=0xE005C008
+ 00000510  E5D00000  LDRB        R0,[R0,#0x0]
+ 00000514  E5102000  LDR         R2,=Rec ; Rec
+ 00000518  E7C20003  STRB        R0,[R2,+R3]
+  433:                                 index++;
+ 0000051C  E5100000  LDR         R0,=index ; index
+ 00000520  E2811001  ADD         R1,R1,#0x0001
+ 00000524  E5C01000  STRB        R1,[R0,#0x0] ; index
+  434:                                 I2C1CONSET  =   1 << AA;
+ 00000528  E3A01004  MOV         R1,#0x4
+ 0000052C  E5100000  LDR         R0,=0xE005C000
+ 00000530  E5C01000  STRB        R1,[R0,#0x0]
+  435:                                 I2C1CONCLR  =   1 << STA;
+ 00000534  E3A01020  MOV         R1,#0x20
+ 00000538  E5100000  LDR         R0,=0xE005C018
+ 0000053C  E5C01000  STRB        R1,[R0,#0x0]
+  436:                                 I2C1CONCLR  =   1 << STO;
+ 00000540  E3A01010  MOV         R1,#0x10
+ 00000544  E5100000  LDR         R0,=0xE005C018
+ 00000548  E5C01000  STRB        R1,[R0,#0x0]
+  437:                             }
+ 0000054C  EA00000B  B           L_84  ; Targ=0x580
+ 00000550          L_83:
+  440:                                 index = 0;
+ 00000550  E3A01000  MOV         R1,#0x0
+ 00000554  E5100000  LDR         R0,=index ; index
+ 00000558  E5C01000  STRB        R1,[R0,#0x0] ; index
+  441:                                 I2C1CONCLR  =   1 << AA;
+ 0000055C  E3A01004  MOV         R1,#0x4
+ 00000560  E5100000  LDR         R0,=0xE005C018
+ 00000564  E5C01000  STRB        R1,[R0,#0x0]
+  442:                                 I2C1CONSET  =   1 << STO;
+ 00000568  E3A01010  MOV         R1,#0x10
+ 0000056C  E5100000  LDR         R0,=0xE005C000
+ 00000570  E5C01000  STRB        R1,[R0,#0x0]
+  443:                                 I2C1CONCLR  =   1 << STA;
+ 00000574  E3A01020  MOV         R1,#0x20
+ 00000578  E5100000  LDR         R0,=0xE005C018
+ 0000057C  E5C01000  STRB        R1,[R0,#0x0]
+  444:                             }
+ 00000580          L_84:
+  446:                             I2C1CONCLR  =   1 << SI;
+ 00000580  E3A01008  MOV         R1,#0x8
+ 00000584  E5100000  LDR         R0,=0xE005C018
+ 00000588  E5C01000  STRB        R1,[R0,#0x0]
+  449:                             break;
+ 0000058C  EA00003B  B           L_50  ; Targ=0x680
+  451:             case (0x50) :   /*... Data byte has been received; ACK has been returned ....*/
+ 00000590          L_61:
+  453:                             I2C1CONSET  =   1 << AA;    
+ 00000590  E3A01004  MOV         R1,#0x4
+ 00000594  E5100000  LDR         R0,=0xE005C000
+ 00000598  E5C01000  STRB        R1,[R0,#0x0]
+  454:                             if (index < MAX)
+ 0000059C  E5100000  LDR         R0,=index ; index
+ 000005A0  E5D02000  LDRB        R2,[R0,#0x0] ; index
+ 000005A4  E1A04002  MOV         R4,R2
+ 000005A8  E3540008  CMP         R4,#0x0008
+ 000005AC  AA00000F  BGE         L_85  ; Targ=0x5F0
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 26  
+
+  456:                                 Rec [index] =   I2C1DAT;
+ 000005B0  E5100000  LDR         R0,=0xE005C008
+ 000005B4  E5D00000  LDRB        R0,[R0,#0x0]
+ 000005B8  E5103000  LDR         R3,=Rec ; Rec
+ 000005BC  E7C30004  STRB        R0,[R3,+R4]
+  457:                                 I2C1CONSET  =   1 << AA;
+ 000005C0  E5100000  LDR         R0,=0xE005C000
+ 000005C4  E5C01000  STRB        R1,[R0,#0x0]
+  458:                                 I2C1CONCLR  =   1 << STA;
+ 000005C8  E3A03020  MOV         R3,#0x20
+ 000005CC  E5100000  LDR         R0,=0xE005C018
+ 000005D0  E5C03000  STRB        R3,[R0,#0x0]
+  459:                                 I2C1CONCLR  =   1 << STO;
+ 000005D4  E3A03010  MOV         R3,#0x10
+ 000005D8  E5100000  LDR         R0,=0xE005C018
+ 000005DC  E5C03000  STRB        R3,[R0,#0x0]
+  460:                                 index++;
+ 000005E0  E5100000  LDR         R0,=index ; index
+ 000005E4  E2822001  ADD         R2,R2,#0x0001
+ 000005E8  E5C02000  STRB        R2,[R0,#0x0] ; index
+  463:                             }
+ 000005EC  EA000023  B           L_50  ; Targ=0x680
+ 000005F0          L_85:
+  466:                                 I2C1CONCLR  =   1 << STO;
+ 000005F0  E3A02010  MOV         R2,#0x10
+ 000005F4  E5100000  LDR         R0,=0xE005C018
+ 000005F8  E5C02000  STRB        R2,[R0,#0x0]
+  467:                                 I2C1CONCLR  =   1 << AA;
+ 000005FC  E5100000  LDR         R0,=0xE005C018
+ 00000600  E5C01000  STRB        R1,[R0,#0x0]
+  469:                                 I2C1CONCLR  =   1 << SI;
+ 00000604  E3A01008  MOV         R1,#0x8
+ 00000608  E5100000  LDR         R0,=0xE005C018
+ 0000060C  E5C01000  STRB        R1,[R0,#0x0]
+  470:                                 index = 0;
+ 00000610  E3A01000  MOV         R1,#0x0
+ 00000614  E5100000  LDR         R0,=index ; index
+ 00000618  E5C01000  STRB        R1,[R0,#0x0] ; index
+  471:                                 Ready   =   'T';            //Make Ready TRUE after Reading is over!
+ 0000061C  E3A01054  MOV         R1,#0x54
+ 00000620  E5100000  LDR         R0,=Ready ; Ready
+ 00000624  E5C01000  STRB        R1,[R0,#0x0] ; Ready
+  476:                             break;
+ 00000628  EA000014  B           L_50  ; Targ=0x680
+  478:             case (0x58) :   /*... Data byte has been received; NOT ACK has been returned ....*/
+ 0000062C          L_62:
+  480:                             I2C1CONSET  =   1 << STO;
+ 0000062C  E3A01010  MOV         R1,#0x10
+ 00000630  E5100000  LDR         R0,=0xE005C000
+ 00000634  E5C01000  STRB        R1,[R0,#0x0]
+  481:                             I2C1CONSET  =   1 << STA;
+ 00000638  E3A01020  MOV         R1,#0x20
+ 0000063C  E5100000  LDR         R0,=0xE005C000
+ 00000640  E5C01000  STRB        R1,[R0,#0x0]
+  482:                             I2C1CONSET  =   1 << AA;
+ 00000644  E3A01004  MOV         R1,#0x4
+ 00000648  E5100000  LDR         R0,=0xE005C000
+ 0000064C  E5C01000  STRB        R1,[R0,#0x0]
+  483:                             I2C1CONCLR  =   1 << SI;
+ 00000650  E3A01008  MOV         R1,#0x8
+ 00000654  E5100000  LDR         R0,=0xE005C018
+ 00000658  E5C01000  STRB        R1,[R0,#0x0]
+  484:                             flag = 'R';
+ 0000065C  E3A01052  MOV         R1,#0x52
+ 00000660  E5100000  LDR         R0,=flag ; flag
+ 00000664  E5C01000  STRB        R1,[R0,#0x0] ; flag
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 27  
+
+  485:                             index = 0;
+ 00000668  E3A01000  MOV         R1,#0x0
+ 0000066C  E5100000  LDR         R0,=index ; index
+ 00000670  E5C01000  STRB        R1,[R0,#0x0] ; index
+  486:                             Ready   =   'T';            //Make Ready TRUE after Reading is over!
+ 00000674  E3A01054  MOV         R1,#0x54
+ 00000678  E5100000  LDR         R0,=Ready ; Ready
+ 0000067C  E5C01000  STRB        R1,[R0,#0x0] ; Ready
+  491:     }
+ 00000680          L_50:
+  492:     I2C1CONCLR  =   1 << SI;
+ 00000680  E3A01008  MOV         R1,#0x8
+ 00000684  E5100000  LDR         R0,=0xE005C018
+ 00000688  E5C01000  STRB        R1,[R0,#0x0]
+  493:     VICVectAddr =   0x00;
+ 0000068C  E3A01000  MOV         R1,#0x0
+ 00000690  E5100000  LDR         R0,=0xFFFFF030
+ 00000694  E5801000  STR         R1,[R0,#0x0]
+  495: }
+ 00000698  E8BD001F  LDMIA       R13!,{R0-R4}
+ 0000069C  E25EF004  SUBS        R15,R14,#0x0004
+ 000006A0          ENDP ; 'I2C_ISR?A'
+
+
+*** CODE SEGMENT '?PR?UART0_ISR?A?RTC':
+  498: void UART0_ISR (void)__irq
+ 00000000  E92D0003  STMDB       R13!,{R0-R1}
+  499: {
+ 00000004            ; SCOPE-START
+  503:     if(((Msg = U0IIR) & 0x01) == 0)                 //Check Flag Status of Recieve Interrupt
+ 00000004  E5100000  LDR         R0,=0xE000C008
+ 00000008  E5900000  LDR         R0,[R0,#0x0]
+ 0000000C  E1A00C00  MOV         R0,R0,LSL #24
+ 00000010  E1A00C20  MOV         R0,R0,LSR #24
+ 00000014  E1A01000  MOV         R1,R0 ; Msg
+ 00000018  ---- Variable 'Msg' assigned to Register 'R1' ----
+ 00000018  E1A00C00  MOV         R0,R0,LSL #24
+ 0000001C  E1A00C20  MOV         R0,R0,LSR #24
+ 00000020  E3100001  TST         R0,#0x0001
+ 00000024  1A00000F  BNE         L_87  ; Targ=0x68
+  505:         switch  (Msg & 0x0E)                        //Filter Msg
+ 00000028  E1A00001  MOV         R0,R1 ; Msg
+ 0000002C  E1A00C00  MOV         R0,R0,LSL #24 ; Msg
+ 00000030  E1A00C20  MOV         R0,R0,LSR #24
+ 00000034  E200000E  AND         R0,R0,#0x000E
+ 00000038  E3500002  CMP         R0,#0x0002
+ 0000003C  0A000009  BEQ         L_87  ; Targ=0x68
+ 00000040  E3500004  CMP         R0,#0x0004
+ 00000044  1A000007  BNE         L_87  ; Targ=0x68
+  507:             case 0x04:  while (!(U0LSR & 0x20));    //Recieve Data 
+ 00000048          L_95:
+ 00000048          L_92:
+ 00000048  E5100000  LDR         R0,=0xE000C014
+ 0000004C  E5D00000  LDRB        R0,[R0,#0x0]
+ 00000050  E3100020  TST         R0,#0x0020
+ 00000054  0AFFFFFB  BEQ         L_92  ; Targ=0x48
+  508:                         Key = U0RBR;
+ 00000058  E5100000  LDR         R0,=0xE000C000
+ 0000005C  E5D01000  LDRB        R1,[R0,#0x0]
+ 00000060  E5100000  LDR         R0,=Key ; Key
+ 00000064  E5C01000  STRB        R1,[R0,#0x0] ; Key
+  515:     }
+ 00000068          L_87:
+  516:     VICVectAddr = 6;
+ 00000068  E3A01006  MOV         R1,#0x6
+ 0000006C  E5100000  LDR         R0,=0xFFFFF030
+ 00000070  E5801000  STR         R1,[R0,#0x0]
+ 00000074            ; SCOPE-END
+ARM COMPILER V2.53,  RTC                                                                   03/05/13  17:42:39  PAGE 28  
+
+  518: }
+ 00000074  E8BD0003  LDMIA       R13!,{R0-R1}
+ 00000078  E25EF004  SUBS        R15,R14,#0x0004
+ 0000007C          ENDP ; 'UART0_ISR?A'
+
+
+
+Module Information          Static
+----------------------------------
+  code size            =    ------
+  data size            =        94
+  const size           =       396
+End of Module Information.
+
+
+ARM COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
